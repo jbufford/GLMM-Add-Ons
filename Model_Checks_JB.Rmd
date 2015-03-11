@@ -1,0 +1,24 @@
+---
+title: Model Checks
+output: pdf_document
+classoption: landscape
+---
+
+```{r, include=F}
+# load("Model Checks JB.RData")
+```
+
+#`r paste(strsplit(name, "/")[[1]][length(strsplit(name, "/")[[1]])])`
+##`r Sys.Date()`
+
+
+```{r, echo=F, fig.width=10, fig.height=7}
+
+infldat <- model.check(M, dat, min.unit, make.pdf=F, make.markdown=F, name, 
+                       infl, infl.obs, do.lm, off=T, respvar, extra, to.files="")
+```
+
+##Session Info:
+```{r, echo=FALSE}
+sessionInfo()
+```

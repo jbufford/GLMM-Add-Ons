@@ -52,11 +52,6 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
   jb <- F
 
-  if(is.null(min.unit)){
-    warning('Please specify a minimum unit for diagnostic plots')
-    break
-  }
-
   library(ggplot2, quietly=T)
   if(infl) {library(influence.ME, quietly=T)}
   library(car, quietly=T)
@@ -98,6 +93,16 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
 
   ###### Extract Model Formula, Terms ######
+
+  if('glm' %in% class(M)){
+    fixvar <- attributes(M$terms)$term.labels
+    Mterms <- fixvar[-grep(':', fixvar)]
+    randvar <- NA
+    if(is.na(respvar)) { respvar <- names(M$model[1]) }
+
+    do.lm <- F
+    class(M) <- 'glm'
+  }
 
   if(class(M)=="lmerMod" | class(M)=="glmerMod") {
 
@@ -225,11 +230,11 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
     print(i)
     if(!is.factor(dat[,i])){
-      warning("Not a Factor, Levene's Test Not Applicable")
+      print("Not a Factor, Levene's Test Not Applicable")
       next
     }
 
-    if(length(levels(dat[,i]))<2) {warning ("Single-level Factor"); next}
+    if(length(levels(dat[,i]))<2) {print("Single-level Factor"); next}
     print(leveneTest(dat$Resid, dat[,i]))
   }
 
@@ -374,6 +379,26 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
   }
 
 
+  ##### Additional Plots for (G)LM ######
+
+  if(class(M) %in% c('glm','lm')){
+
+    if(class(M)=='glm'){
+      class(M) <- c('glm','lm')
+    }
+
+    plot(M)
+
+    infIndexPlot(M)
+
+    avPlots(M, id.method="mahal", id.n=3)
+
+    if(class(M)[1]=='glm'){
+      class(M) <- 'glm'
+    }
+  }
+
+
   ###### Influential Observations ######
 
   if(infl & !(class(M)=='lmerMod' | class(M)=="glmerMod")) {
@@ -480,11 +505,11 @@ levenes <- function(M, dat, extra=NULL) {
 
     print(i)
     if(!is.factor(dat[,i])){
-      warning("Not a Factor, Levene's Test Not Applicable")
+      print("Not a Factor, Levene's Test Not Applicable")
       next
     }
 
-    if(length(levels(dat[,i]))<2) {warning("Single-level Factor"); next}
+    if(length(levels(dat[,i]))<2) {print("Single-level Factor"); next}
     print(leveneTest(dat$Resid, dat[,i]))
   }
 

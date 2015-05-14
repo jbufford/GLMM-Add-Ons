@@ -1,7 +1,7 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                            ## February 16, 2015 ##
+                             ## May 12, 2015 ##
 
 ###############################################################################
 
@@ -44,7 +44,7 @@
 
 model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Model",
                         infl=F, infl.obs=F, do.lm=F, off=T, respvar=NA, extra=NULL,
-                        to.files=""){
+                        to.files="", parallel=F, cl=NULL, ncpus=NULL, stopCL=T){
 
   if(to.files!="" & substr(to.files,nchar(to.files),nchar(to.files)) != "/"){
     to.files <- paste(to.files, "/", sep="")
@@ -417,8 +417,10 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
     if(infl.obs) {
 
-      Infl <- if(jb) {influenceJB(model = M, obs=TRUE)} else {
-        influence(model = M, obs=TRUE)}
+      Infl <- if(jb) {
+        influenceJB(model=M, obs=T, parallel=parallel, cl=cl, ncpus=ncpus, stopCL=stopCL)
+      }
+      else { influence(model = M, obs=TRUE) }
       plot(Infl, which="cook", sort=T, cutoff=(4/(nrow(dat)-length(c(fixvar,randvar))
                                                   -1)), main="Cook's D for LMM")
       plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar))
@@ -427,9 +429,10 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
 
     if (min.unit %in% Mterms) {
-      Infl.mu <- if(jb) {influenceJB(model = M, group = min.unit)} else {
-        influence(model = M, group = min.unit)
-      }
+      Infl.mu <- if(jb) {
+        influenceJB(model=M, group=min.unit, parallel=parallel, cl=cl, ncpus=ncpus,
+                    stopCL=stopCL)
+        } else { influence(model = M, group = min.unit) }
       plot(Infl.mu, which="cook", sort=T,
            cutoff=(4/(length(unique(dat$MU))-length(c(fixvar,randvar))-1)),
            main = paste("Cook's D by", min.unit))

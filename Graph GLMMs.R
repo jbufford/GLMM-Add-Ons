@@ -108,7 +108,7 @@ merge.ci <- function(ci.list, ci.names=NA, GraphN=NA){
 
 
 plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA, 
-                      facet.scale = 'free'){
+                      facet.scale = 'free', ...){
 
   library(ggplot2)
   library(grid)
@@ -138,7 +138,7 @@ plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
           axis.text = element_text(size = 14), axis.title = element_text(size = 16),
           strip.text = element_text(size=16),
           strip.background = element_rect(fill="white", color="White"), 
-          panel.margin.x = unit(3, 'mm'))
+          panel.margin.x = unit(3, 'mm'), ...)
 
   if(class(dat)=="list" & class(dat[[1]])=="list"){
 

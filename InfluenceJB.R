@@ -1,5 +1,5 @@
 influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "single",
-          count = FALSE, delete = TRUE, parallel=F, ncpus=NULL, cl=NULL, stopCL=T, ...)
+          count = FALSE, delete = TRUE, parallel=F, ncpus=NULL, ...)
 {
   if (is.null(group) & !obs) {
     stop("Please specify either the 'group' parameter, or specify 'obs=TRUE'")
@@ -58,11 +58,8 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
 
         library(doParallel)
 
-        if(is.null(cl) & !is.null(ncpus)){
+        if(!is.null(ncpus)){
           cl <- makeCluster(ncpus)
-        }
-
-        if(!is.null(cl)){
           registerDoParallel(cl)
         } else {registerDoParallel()}
 
@@ -139,11 +136,8 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
 
         library(doParallel)
 
-        if(is.null(cl) & !is.null(ncpus)){
+        if(!is.null(ncpus)){
           cl <- makeCluster(ncpus)
-        }
-
-        if(!is.null(cl)){
           registerDoParallel(cl)
         } else {registerDoParallel()}
 
@@ -200,7 +194,7 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
     }
   }
 
-if(is.null(cl) & parallel){ stopImplicitCluster() } else if(stopCL & parallel) {
+if(is.null(ncpus) & parallel){stopImplicitCluster()} else if(!is.null(ncpus) & parallel){
   stopCluster(cl)}
 
 estex <- list(or.fixed = or.fixed, or.se = or.se, or.vcov = or.vcov, or.test = or.test,

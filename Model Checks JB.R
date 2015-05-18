@@ -417,25 +417,30 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
     if(infl.obs) {
 
-      Infl <- if(jb) {
+      Infl <- if(jb|parallel) {
         influenceJB(model=M, obs=T, parallel=parallel, cl=cl, ncpus=ncpus, stopCL=stopCL)
       }
       else { influence(model = M, obs=TRUE) }
-      plot(Infl, which="cook", sort=T, cutoff=(4/(nrow(dat)-length(c(fixvar,randvar))
-                                                  -1)), main="Cook's D for LMM")
-      plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar))
-                                                 -1)), main="Dfbetas for LMM")
+
+      plot(Infl, which="cook", sort=T, cutoff=(4/(nrow(dat)-length(c(fixvar,randvar))-1)),
+           main="Cook's D for LMM")
+
+      plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar)) -1)),
+           sort=T, to.sort=fixvar[1], main="Dfbetas for LMM")
     }
 
 
     if (min.unit %in% Mterms) {
-      Infl.mu <- if(jb) {
+      Infl.mu <- if(jb|parallel) {
         influenceJB(model=M, group=min.unit, parallel=parallel, cl=cl, ncpus=ncpus,
                     stopCL=stopCL)
         } else { influence(model = M, group = min.unit) }
       plot(Infl.mu, which="cook", sort=T,
            cutoff=(4/(length(unique(dat$MU))-length(c(fixvar,randvar))-1)),
            main = paste("Cook's D by", min.unit))
+    } else {
+      print('Minimum unit must be a model term to calculate influence')
+      Infl.mu <- NA
     }
 
     if(make.pdf & off) { dev.off() }

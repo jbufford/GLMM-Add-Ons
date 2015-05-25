@@ -53,7 +53,7 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
   jb <- F
 
   library(ggplot2, quietly=T)
-  if(infl) {library(influence.ME, quietly=T)}
+  if(infl|infl.obs) {library(influence.ME, quietly=T); infl <- T}
   library(car, quietly=T)
   library(HLMdiag, quietly=T)
   library(coefplot, quietly=T)
@@ -81,7 +81,7 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
            output_file=paste(name2, "_Model_Checks_", Sys.Date(), ".pdf", sep=""),
            output_dir=wd)
 
-    if(infl|infl.obs) {return(infldat)} else {return()}
+    if(infl) {return(infldat)} else {return()}
   }
 
 

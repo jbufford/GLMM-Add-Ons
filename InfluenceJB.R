@@ -167,7 +167,7 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
           altered.no.estex<-which(substr(names(lme4::fixef(model.updated)),1,6)!="estex.")
           alt.fixed[i, ] <- as.matrix(lme4::fixef(model.updated)[altered.no.estex])
           alt.se[i, ] <- as.matrix(se.fixef(model.updated)[altered.no.estex])
-          alt.vcov[[i]] <-as.matrix(vcov(model.updated)[altered.no.estex,
+          alt.vcov[[i]] <- as.matrix(vcov(model.updated)[altered.no.estex,
                                                         altered.no.estex])
           alt.test[i, ] <- as.matrix(coef(summary(model.updated))[, 3][altered.no.estex])
         }

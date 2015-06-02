@@ -42,9 +42,9 @@
 ##### Model Check #############################################################
 
 
-model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Model",
+model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="Model",
                         infl=F, infl.obs=F, do.lm=F, off=T, respvar=NA, extra=NULL,
-                        to.files="", parallel=F, cl=NULL, ncpus=NULL, stopCL=T){
+                        to.files="", parallel=F, ncpus=NULL){
 
   if(to.files!="" & substr(to.files,nchar(to.files),nchar(to.files)) != "/"){
     to.files <- paste(to.files, "/", sep="")
@@ -85,13 +85,6 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
   }
 
 
-  ##### Prep Data #####
-
-  dat$Fit <- fitted(M)
-  dat$Resid <- resid(M) #for lme4 = deviance resids, for glmmadmb = pearson
-  dat$MU <- dat[,min.unit]
-
-
   ###### Extract Model Formula, Terms ######
 
   if('glm' %in% class(M)){
@@ -102,17 +95,29 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
     do.lm <- F
     class(M) <- 'glm'
+
+    if(is.na(min.unit)){print('Please specify a minimum unit for graphing.'); break}
   }
 
   if(class(M)=="lmerMod" | class(M)=="glmerMod") {
 
     library(lme4)
 
+    #Set response variable
     if(is.na(respvar)) { respvar <- names(M@frame)[1] }
+
+    #Set random variable(s) and min.unit
     randvar <- names(M@flist)
+    if(is.na(min.unit)) {min.unit <- randvar[1]}
+
+    #Set fixed variables (excludes interactions)
     fixvar <- attributes(terms(M@frame))$term.labels
     fixvar <- fixvar[!(fixvar%in% randvar)]
+
+    #Set list of terms (includes interactions)
     Mterms <- names(M@frame)[2:length(names(M@frame))]
+
+    #Deal with weights or offsets
     if("(weights)" %in% Mterms) {
       jb <- T
       Mterms <- Mterms[!(Mterms %in% "(weights)")]}
@@ -145,6 +150,8 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
       randvar <- c(attributes(M$modelStruct$reStruct)$names, extra)
       Mterms <- randvar
     }
+
+    if(is.na(min.unit)) {min.unit <- randvar[1]}
   }
 
   if(class(M)=='gls') {
@@ -154,24 +161,44 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
     fixvar <- names(M$parAssign)[!names(M$parAssign) %in% "(Intercept)"]
     Mterms <- names(M$parAssign)[-grep(names(M$parAssign), pattern=":")][-1]
     randvar <- NA
+    if(is.na(min.unit)){print('Please specify a minimum unit for graphing.'); break}
   }
 
   if(class(M)=='glmmadmb') {
 
     library(glmmADMB)
 
+    #Set response variable
     if(is.na(respvar)) { respvar <- names(M$frame)[1] }
+
+    #Set random variable(s) and min unit
     randvar <- names(M$S)
+    if(is.na(min.unit)) {min.unit <- randvar[1]}
+
+    #Set fixed variables (excludes interactions)
     fixvar <- attributes(M$terms)$term.labels
+
+    #Set list of terms (includes interactions)
     Mterms <- c(names(M$frame)[2:length(M$frame)], randvar)
+
+    #Deal with weights or offsets
     #     if("(weights)" %in% Mterms) {Mterms <- Mterms[!(Mterms %in% "(weights)")]}
     if(sum(grepl("offset", Mterms))>0) {
       jb <- T
       Mterms <- gsub('offset\\(|\\)',"",Mterms[!(Mterms %in% "(offset)")])}
-    dat$Resid <- as.vector(M$residuals) #pearson's residuals
-    #(not sure why but resid() isn't working)
+
+    #Set family
     fam <- M$family
   }
+
+
+  ##### Prep Data #####
+
+  dat$Fit <- fitted(M)
+  dat$Resid <- if(class(M)=='glmmADMB') {as.vector(M$residuals)} else {resid(M)}
+  #for lme4 = deviance resids, for glmmadmb = pearson
+  #not sure why but resid() isn't working for glmmadmb
+  dat$MU <- dat[,min.unit]
 
 
   ###### Create PDF ######
@@ -418,7 +445,7 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
     if(infl.obs) {
 
       Infl <- if(jb|parallel) {
-        influenceJB(model=M, obs=T, parallel=parallel, cl=cl, ncpus=ncpus, stopCL=stopCL)
+        influenceJB(model=M, obs=T, parallel=parallel, ncpus=ncpus)
       }
       else { influence(model = M, obs=TRUE) }
 
@@ -432,8 +459,7 @@ model.check <- function(M, dat, min.unit, make.pdf=F, make.markdown=F, name="Mod
 
     if (min.unit %in% Mterms) {
       Infl.mu <- if(jb|parallel) {
-        influenceJB(model=M, group=min.unit, parallel=parallel, cl=cl, ncpus=ncpus,
-                    stopCL=stopCL)
+        influenceJB(model=M, group=min.unit, parallel=parallel, ncpus=ncpus)
         } else { influence(model = M, group = min.unit) }
       plot(Infl.mu, which="cook", sort=T,
            cutoff=(4/(length(unique(dat$MU))-length(c(fixvar,randvar))-1)),
@@ -535,9 +561,9 @@ levenes <- function(M, dat, extra=NULL) {
 ##### Bootstrap Function ######################################################
 
 
-library(boot)
-
 bootm <- function(dat, i, M, min.unit=NA, min.reps=0) {
+
+  library(boot)
 
   if(class(M)=="lmerMod" | class(M)=="glmerMod") {library(lme4)}
   if(class(M)=="lme") {library(nlme)} #to avoid recursive errors

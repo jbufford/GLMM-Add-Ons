@@ -15,7 +15,7 @@ classoption: landscape
 ```{r, echo=F, fig.width=10, fig.height=7}
 
 infldat <- model.check(M, dat, min.unit, make.pdf=F, make.markdown=F, name, infl, infl.obs, 
-                       do.lm, off=T, respvar, extra, to.files="", parallel,cl,ncpus,stopCL)
+                       do.lm, off=T, respvar, extra, to.files="", parallel, ncpus)
 ```
 
 ##Session Info:

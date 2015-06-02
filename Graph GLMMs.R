@@ -1,7 +1,7 @@
 ########################### Graphing (G)LMM Results ###########################
                             ## Jennifer Bufford ##
                           ## jlbufford@gmail.com ##
-                             ## December 8, 2014 ##
+                             ## June 2, 2015 ##
 
 ###############################################################################
 
@@ -13,10 +13,11 @@
 
 #Output: data.frame with variable names for graphing, coefs, and 95% CI
 
-#getci takes a list from boot.ci or extracted from as.mcmc and creates a data.frame
-#         of variable names (for graphing) and coef and 95% CI
+#getci takes a boot object or a list from boot.ci or a data.frame from as.mcmc
+#         creates a data.frame of variable names (for graphing) and coef and 95% CI
 #merge.ci takes a list of data.frames with CI and a vector of names
 #         creates a single data.frame for plotting facetted graphs
+#plot.coef plots the coefficients and 95% CI from one or multiple models
 
 ###############################################################################
 
@@ -26,6 +27,20 @@
 
 
 getci <- function(dat, CodeN = NA, GraphN = NA){
+
+  if(class(dat)=='boot'){
+
+    library(boot)
+
+    dat.bt <- dat
+    dat <- list()
+
+    for(i in 1:length(dat.bt$t0)) {
+      dat[[i]] <- boot.ci(dat.bt, index=i, type=c("norm", "basic"))
+      names(dat)[i] <- names(dat.bt$t0)[i]
+    }
+  }
+
 
   if(class(dat)=="list") {
 
@@ -43,7 +58,7 @@ getci <- function(dat, CodeN = NA, GraphN = NA){
     }
 
     if(!is.na(CodeN[1]) & !is.na(GraphN[1])){
-      cidat$CName <- factor(cidat$CName, 
+      cidat$CName <- factor(cidat$CName,
                             levels=unique(GraphN[GraphN %in% cidat$CName]),order=T)
     }
 
@@ -92,9 +107,9 @@ merge.ci <- function(ci.list, ci.names=NA, GraphN=NA){
   if(!is.na(ci.names[1])){
     ci.merg$Var <- factor(ci.merg$Var, levels=ci.names, order=T)
   }
-  
+
   if(!is.na(GraphN[1])){
-    ci.merg$CName <- factor(ci.merg$CName, 
+    ci.merg$CName <- factor(ci.merg$CName,
                             levels=unique(GraphN[GraphN %in% ci.merg$CName]),
                             order=T)
   }
@@ -107,7 +122,7 @@ merge.ci <- function(ci.list, ci.names=NA, GraphN=NA){
 ##### Plot Coefs ##############################################################
 
 
-plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA, 
+plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
                       facet.scale = 'free', ...){
 
   library(ggplot2)
@@ -129,7 +144,7 @@ plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
 
     if(get.ci){ toplot <- getci(dat, CodeN, GraphN) } else { toplot <- dat }
   }
-  
+
   coef.plot <- ggplot(data=toplot, aes(x=Coef, y=CName, shape=Sig)) +
     scale_color_manual(guide=F, name="Significance") +
     xlab("Effect Size") + ylab("") + theme_bw() + geom_vline(aes(x=0)) +
@@ -137,7 +152,7 @@ plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
     theme(panel.grid = element_blank(),
           axis.text = element_text(size = 14), axis.title = element_text(size = 16),
           strip.text = element_text(size=16),
-          strip.background = element_rect(fill="white", color="White"), 
+          strip.background = element_rect(fill="white", color="White"),
           panel.margin.x = unit(3, 'mm'), ...)
 
   if(class(dat)=="list" & class(dat[[1]])=="list"){

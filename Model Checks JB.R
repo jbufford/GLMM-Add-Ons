@@ -58,8 +58,12 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   library(HLMdiag, quietly=T)
   library(coefplot, quietly=T)
   library(lattice, quietly=T)
+  try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
 
   print(summary(M))
+
+  print('R-Squared Values:')
+  try(print(r.squared(M)))
 
 
   ###### Create Markdown PDF ######

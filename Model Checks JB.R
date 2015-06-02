@@ -29,9 +29,6 @@
 
 #model.check runs a series of model checks for mixed models (see output above)
 #levenes performs a levene's test of the residuals by grouping factors
-#Bootstrap function bootstraps data/model to generate 95% CI
-#   Re-runs if model was unstable and didn't work
-#   Optionally, re-samples if data did not include a min number of reps in every level of #       a variable (although that doesn't seem to help)
 
 ###############################################################################
 
@@ -558,35 +555,4 @@ levenes <- function(M, dat, extra=NULL) {
       print(leveneTest(dat$Resid, dat[,i]))
     }
   }
-}
-
-
-
-##### Bootstrap Function ######################################################
-
-
-bootm <- function(dat, i, M, min.unit=NA, min.reps=0) {
-
-  library(boot)
-
-  if(class(M)=="lmerMod" | class(M)=="glmerMod") {library(lme4)}
-  if(class(M)=="lme") {library(nlme)} #to avoid recursive errors
-
-  dats <- dat[i,]
-
-  if(!is.na(min.unit) & min.reps>0){
-    if(sum(xtabs( ~ dats[, min.unit])< min.reps)>0){
-      boot.samp <- sample(1:nrow(dat), nrow(dat), replace=T)
-      warning("Error - Re-sampling")
-      bootm(dat, boot.samp, M, min.unit, min.reps)
-    }
-  }
-  mod <- try(update(M, data=dats), T)
-
-  if(class(mod)=="try-error") {
-    boot.samp <- sample(1:nrow(dat), nrow(dat), replace=T)
-    warning("Error - Re-running")
-    bootm(dat, boot.samp, M, min.unit, min.reps)
-
-  } else {fixef(mod)}
 }

@@ -9,10 +9,13 @@
 #         (code and graph names must be ordered to match)
 #       a list of data.frames w/ CI, a vector of names for the data.frames
 
-#Requires: ggplot2, grid
+#Requires: boot, ggplot2, grid
 
 #Output: data.frame with variable names for graphing, coefs, and 95% CI
 
+#Bootstrap function bootstraps data/model to generate 95% CI
+#   Re-runs if model was unstable and didn't work
+#   Optionally, re-samples if data did not include a min number of reps in every level of #       a variable (although that doesn't seem to help)
 #getci takes a boot object or a list from boot.ci or a data.frame from as.mcmc
 #         creates a data.frame of variable names (for graphing) and coef and 95% CI
 #merge.ci takes a list of data.frames with CI and a vector of names
@@ -20,6 +23,37 @@
 #plot.coef plots the coefficients and 95% CI from one or multiple models
 
 ###############################################################################
+
+
+
+##### Bootstrap Function ######################################################
+
+
+bootm <- function(dat, i, M, min.unit=NA, min.reps=0) {
+
+  library(boot)
+
+  if(class(M)=="lmerMod" | class(M)=="glmerMod") {library(lme4)}
+  if(class(M)=="lme") {library(nlme)} #to avoid recursive errors
+
+  dats <- dat[i,]
+
+  if(!is.na(min.unit) & min.reps>0){
+    if(sum(xtabs( ~ dats[, min.unit])< min.reps)>0){
+      boot.samp <- sample(1:nrow(dat), nrow(dat), replace=T)
+      warning("Error - Re-sampling")
+      bootm(dat, boot.samp, M, min.unit, min.reps)
+    }
+  }
+  mod <- try(update(M, data=dats), T)
+
+  if(class(mod)=="try-error") {
+    boot.samp <- sample(1:nrow(dat), nrow(dat), replace=T)
+    warning("Error - Re-running")
+    bootm(dat, boot.samp, M, min.unit, min.reps)
+
+  } else {fixef(mod)}
+}
 
 
 

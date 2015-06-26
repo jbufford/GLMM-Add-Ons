@@ -1,6 +1,6 @@
 ########################### Graphing (G)LMM Results ###########################
                             ## Jennifer Bufford ##
-                          ## jlbufford@gmail.com ##
+                      ## jennifer.bufford@lincoln.ac.nz ##
                              ## June 2, 2015 ##
 
 ###############################################################################
@@ -157,7 +157,7 @@ merge.ci <- function(ci.list, ci.names=NA, GraphN=NA){
 
 
 plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
-                      facet.scale = 'free', ...){
+                      facet.scale = 'free', intercept = T, ...){
 
   library(ggplot2)
   library(grid)
@@ -179,6 +179,9 @@ plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
     if(get.ci){ toplot <- getci(dat, CodeN, GraphN) } else { toplot <- dat }
   }
 
+  if(!intercept) {
+    toplot <- toplot[!toplot$CName %in% c('Intercept','(Intercept)','intercept'),]}
+
   coef.plot <- ggplot(data=toplot, aes(x=Coef, y=CName, shape=Sig)) +
     scale_color_manual(guide=F, name="Significance") +
     xlab("Effect Size") + ylab("") + theme_bw() + geom_vline(aes(x=0)) +
@@ -194,14 +197,13 @@ plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
     print(
       coef.plot + geom_point(size=4) +
         geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15)) +
-        xlab("Effect Size") + facet_grid(.~Var, scales = facet.scale)
+        facet_grid(.~Var, scales = facet.scale)
     )
   } else {
 
     print(
       coef.plot + geom_point(size=4) +
-        geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15)) +
-        xlab("Effect Size from the Optimal Model")
+        geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15))
     )
   }
 

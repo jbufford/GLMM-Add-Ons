@@ -1,6 +1,6 @@
 ############################## GLMM Simulations ###############################
                             ## Jennifer Bufford ##
-                          ## jlbufford@gmail.com ##
+                      ## jennifer.bufford@lincoln.ac.nz ##
                            ## February 16, 2015 ##
 
 ###############################################################################

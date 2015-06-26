@@ -8,11 +8,12 @@
 #Input: A GLMM model, the data used to make the model, optional specifiers
 #       incl an optional name for the (optional) pdf file
 
-#Requires: car, influence.ME, InfluenceJB, ggplot2, HLMdiag, coefplot, lattice, stringr
+#Requires: car, coefplot, ggplot2, lattice
 #           and either lme4, nlme or glmmADMB
-#          Optional: influence.ME, InfluenceJB, RMarkdown
+#          Optional: influence.ME, InfluenceJB, rmarkdown, HLMDiag, rsquaredglmm.R
 
-#Output: Dotchart and qqplot of raw data
+#Output: Model summary and R2
+#        Dotchart and qqplot of raw data
 #        Graphs of all terms vs the response variable (raw data)
 #        Graphs of resids vs fits, resids as qqnorm
 #        Resids vs all model terms
@@ -52,15 +53,31 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   library(ggplot2, quietly=T)
   if(infl|infl.obs) {library(influence.ME, quietly=T); infl <- T}
   library(car, quietly=T)
-  library(HLMdiag, quietly=T)
   library(coefplot, quietly=T)
   library(lattice, quietly=T)
-  try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
+  #Depending on call, may load lme4, nlme, glmmADMB, rmarkdown, HLMdiag or rsquaredglmm.R
+
 
   print(summary(M))
 
-  print('R-Squared Values:')
-  try(print(r.squared(M)))
+  if(!'glm' %in% class(M)){
+
+    try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
+
+    print('R-Squared Values:')
+    try(print(r.squared(M)))
+
+    print('Wald Chi-Square Test:')
+    print(Anova(M))
+  }
+
+  if('glm' %in% class(M)){
+    print('Pseudo R-Squared (explained deviance):')
+    print(1-M$deviance/M$null.deviance)
+
+    print('F-Test with Dispersion Estimate Based on Pearson Residuals:')
+    print(Anova(M))
+  }
 
 
   ###### Create Markdown PDF ######
@@ -93,11 +110,12 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     Mterms <- fixvar[-grep(':', fixvar)]
     randvar <- NA
     if(is.na(respvar)) { respvar <- names(M$model[1]) }
+    fam <- M$family$family
 
     do.lm <- F
     class(M) <- 'glm'
 
-    if(is.na(min.unit)){print('Please specify a minimum unit for graphing.'); break}
+    if(is.na(min.unit)){return('Please specify a minimum unit for graphing.')}
   }
 
   if(class(M)=="lmerMod" | class(M)=="glmerMod") {
@@ -162,7 +180,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     fixvar <- names(M$parAssign)[!names(M$parAssign) %in% "(Intercept)"]
     Mterms <- names(M$parAssign)[-grep(names(M$parAssign), pattern=":")][-1]
     randvar <- NA
-    if(is.na(min.unit)){print('Please specify a minimum unit for graphing.'); break}
+    if(is.na(min.unit)){return('Please specify a minimum unit for graphing.')}
   }
 
   if(class(M)=='glmmadmb') {
@@ -304,18 +322,26 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ##### Check for Overdispersion #####
 
-  if((class(M)=="glmerMod" | class(M)=="glmmadmb")) {
+  if(class(M) %in% c("glmerMod","glmmadmb",'glm')) {
 
     if(fam %in% c("poisson", 'binomial')) {
 
-      rdf <- nrow(model.frame(M)) -
-        (sum(sapply(VarCorr(M),FUN=function(x){nrow(x)*(nrow(x)+1)/2}))
-         + length(fixef(M)))
-      rp <- residuals(M, type="pearson")
-      pval <- pchisq(sum(rp^2), df=rdf, lower.tail=FALSE)
+      if(class(M)=='glm'){
+        print('Test for Overdispersion:')
+        print(M$deviance/M$df.residual)
+        print('(should be close to 1)')
+      }
 
-      print('Test for Overdispersion:')
-      print(c(chisq=sum(rp^2),ratio=sum(rp^2)/rdf,rdf=rdf,p=pval))
+      if(class(M) %in% c('glmerMod','glmmadmb')){
+        rdf <- nrow(model.frame(M)) -
+          (sum(sapply(VarCorr(M),FUN=function(x){nrow(x)*(nrow(x)+1)/2}))
+           + length(fixef(M)))
+        rp <- residuals(M, type="pearson")
+        pval <- pchisq(sum(rp^2), df=rdf, lower.tail=FALSE)
+
+        print('Test for Overdispersion:')
+        print(c(chisq=sum(rp^2),ratio=sum(rp^2)/rdf,rdf=rdf,p=pval))
+      }
     }
     ## modified by Orou Gaoue from: http://glmm.wikidot.com/faq
     ## number of variance parameters in an n-by-n variance-covariance matrix
@@ -325,6 +351,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   ###### Leverage Plots ######
 
   if(length(randvar) < 3 & class(M)=="lmerMod"){
+
+    library(HLMdiag, quietly=T)
 
     dat <- cbind(dat, leverage(M, level=1))
 
@@ -454,7 +482,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
            main="Cook's D for LMM")
 
       plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar)) -1)),
-           sort=T, to.sort=fixvar[1], main="Dfbetas for LMM")
+           sort=T, to.sort=colnames(M@pp$X)[2], main="Dfbetas for LMM")
     }
 
 
@@ -470,7 +498,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       Infl.mu <- NA
     }
 
-    if(make.pdf & off) { dev.off() }
+#     if(make.pdf & off) { dev.off() }
 
     if(infl.obs) { return(list(Infl, Infl.mu)) } else { return(Infl.mu) }
   }

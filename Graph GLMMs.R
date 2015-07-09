@@ -1,7 +1,7 @@
 ########################### Graphing (G)LMM Results ###########################
                             ## Jennifer Bufford ##
                       ## jennifer.bufford@lincoln.ac.nz ##
-                             ## June 2, 2015 ##
+                             ## July 1, 2015 ##
 
 ###############################################################################
 
@@ -162,7 +162,7 @@ plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
   library(ggplot2)
   library(grid)
 
-  if(class(dat)=="list" & class(dat[[1]])=="list"){
+  if(class(dat)=="list" & class(dat[[1]]) %in% c("list", 'boot')){
 
     datl <- list()
 
@@ -192,7 +192,7 @@ plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
           strip.background = element_rect(fill="white", color="White"),
           panel.margin.x = unit(3, 'mm'), ...)
 
-  if(class(dat)=="list" & class(dat[[1]])=="list"){
+  if(class(dat)=="list" & class(dat[[1]]) %in% c("list",'boot')){
 
     print(
       coef.plot + geom_point(size=4) +

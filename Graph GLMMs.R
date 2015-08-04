@@ -60,7 +60,7 @@ bootm <- function(dat, i, M, min.unit=NA, min.reps=0) {
 ##### Extract CI from Bootstrap or MCMC #######################################
 
 
-getci <- function(dat, CodeN = NA, GraphN = NA){
+getci <- function(dat, CodeN, GraphN){
 
   if(class(dat)=='boot'){
 
@@ -84,14 +84,14 @@ getci <- function(dat, CodeN = NA, GraphN = NA){
                       "HiCI"=dat[[i]]$normal[3])
       x$Sig <- ifelse((x$HiCI<0 | x$LowCI>0), "sig", 'NS')
 
-      if(!is.na(CodeN[1]) & !is.na(GraphN[1])){
+      if(!missing(CodeN) & !missing(GraphN)){
         x$CName <- as.character(GraphN[which(CodeN==i)])
       } else { x$CName <- i }
 
       if(i==names(dat)[1]) {cidat <- x} else {cidat <- rbind(cidat, x)}
     }
 
-    if(!is.na(CodeN[1]) & !is.na(GraphN[1])){
+    if(!missing(CodeN) & !missing(GraphN)){
       cidat$CName <- factor(cidat$CName,
                             levels=unique(GraphN[GraphN %in% cidat$CName]),order=T)
     }
@@ -103,7 +103,7 @@ getci <- function(dat, CodeN = NA, GraphN = NA){
 
     dat$Sig <- ifelse((dat$HiCI<0 | dat$LowCI>0), "sig", 'NS')
 
-    if(!is.na(CodeN[1]) & !is.na(GraphN[1])){
+    if(!missing(CodeN) & !missing(GraphN)){
       for (i in dat$CMName) {
 
         dat[dat$CMName==i, "CName"] <- as.character(GraphN[which(CodeN==i)])
@@ -122,11 +122,11 @@ getci <- function(dat, CodeN = NA, GraphN = NA){
 ##### Create Single Data.frame with CI ########################################
 
 
-merge.ci <- function(ci.list, ci.names=NA, GraphN=NA){
+merge.ci <- function(ci.list, ci.names, GraphN){
 
   for(i in 1:length(ci.list)){
 
-    if(!is.na(ci.names[1])){ ci.list[[i]]$Var <- ci.names[i] } else {
+    if(!missing(ci.names)){ ci.list[[i]]$Var <- ci.names[i] } else {
 
         if(length(names(ci.list))>0){
           ci.list[[i]]$Var <- names(ci.list)[i] } else {ci.list[[i]]$Var <- i}
@@ -138,11 +138,11 @@ merge.ci <- function(ci.list, ci.names=NA, GraphN=NA){
   #Format
   row.names(ci.merg) <- 1:nrow(ci.merg)
 
-  if(!is.na(ci.names[1])){
+  if(!missing(ci.names)){
     ci.merg$Var <- factor(ci.merg$Var, levels=ci.names, order=T)
   }
 
-  if(!is.na(GraphN[1])){
+  if(!missing(GraphN)){
     ci.merg$CName <- factor(ci.merg$CName,
                             levels=unique(GraphN[GraphN %in% ci.merg$CName]),
                             order=T)
@@ -156,7 +156,7 @@ merge.ci <- function(ci.list, ci.names=NA, GraphN=NA){
 ##### Plot Coefs ##############################################################
 
 
-plot.coef <- function(dat, get.ci=T, CodeN=NA, GraphN=NA, ci.names=NA,
+plot.coef <- function(dat, get.ci=T, CodeN, GraphN, ci.names,
                       facet.scale = 'free', intercept = T, ...){
 
   library(ggplot2)

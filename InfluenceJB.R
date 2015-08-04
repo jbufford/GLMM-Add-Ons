@@ -8,7 +8,8 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
     stop("Either specify the 'group' parameter, or specify 'obs=TRUE', but not both.")
   }
   data.adapted <- model.frame(model)
-  #### Change Made Here ####
+
+  #Account for offsets or weights
   if("(weights)" %in% names(data.adapted)) {
     names(data.adapted)[names(data.adapted)=="(weights)"] <-
       as.character(model@call$weights)}
@@ -64,8 +65,8 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
         } else {registerDoParallel()}
 
         model.updated <-
-          foreach (i = 1:n.groups, .inorder=F, .export=
-                     c('exclude.influenceJB','lmer','glmer','glmerControl')) %dopar% {
+          foreach (i = 1:n.groups, .inorder=F, .packages=c('lme4'),
+                   .export=c('exclude.influenceJB')) %dopar% {
                        #This is where a new model is created#
                        exclude.influenceJB(model, group, grouping.names[i], gf = gf,
                                            delete = delete)
@@ -142,11 +143,12 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
         } else {registerDoParallel()}
 
 
-        model.updated<-
-          foreach(i=1:n.obs, .inorder=F,
-                  .export=c('exclude.influenceJB','lmer','glmer','glmerControl')) %dopar%{
-                    exclude.influenceJB(model, obs = i)
-                  }
+        model.updated <-
+          foreach (i=1:n.obs, .inorder=F, .packages=c('lme4'),
+                   .export= c('exclude.influenceJB')) %dopar% {
+                       #This is where a new model is created#
+                     exclude.influenceJB(model, obs = i)
+                     }
 
         for (i in 1:n.obs){
           altered.no.estex <- which(substr(names(lme4::fixef(model.updated[[i]])),1,6)

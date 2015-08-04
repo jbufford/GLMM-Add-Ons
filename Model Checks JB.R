@@ -479,10 +479,10 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       else { influence(model = M, obs=TRUE) }
 
       plot(Infl, which="cook", sort=T, cutoff=(4/(nrow(dat)-length(c(fixvar,randvar))-1)),
-           main="Cook's D for LMM")
+           main="Cook's D")
 
       plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar)) -1)),
-           sort=T, to.sort=colnames(M@pp$X)[2], main="Dfbetas for LMM")
+           sort=T, to.sort=colnames(M@pp$X)[2], main="Dfbetas")
     }
 
 

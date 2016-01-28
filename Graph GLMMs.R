@@ -184,7 +184,7 @@ plot.coef <- function(dat, get.ci=T, CodeN, GraphN, ci.names,
 
   coef.plot <- ggplot(data=toplot, aes(x=Coef, y=CName, shape=Sig)) +
     scale_color_manual(guide=F, name="Significance") +
-    xlab("Effect Size") + ylab("") + theme_bw() + geom_vline(aes(x=0)) +
+    xlab("Effect Size") + ylab("") + theme_bw() + geom_vline(aes(xintercept=0)) +
     scale_shape_manual(guide=F, values=c(1,16)) +
     theme(panel.grid = element_blank(),
           axis.text = element_text(size = 14), axis.title = element_text(size = 16),

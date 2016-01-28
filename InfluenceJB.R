@@ -64,6 +64,8 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
           registerDoParallel(cl)
         } else {registerDoParallel()}
 
+        clusterCall(cl, function(x) {.libPaths(x)}, .libPaths())
+
         model.updated <-
           foreach (i = 1:n.groups, .inorder=F, .packages=c('lme4'),
                    .export=c('exclude.influenceJB')) %dopar% {
@@ -142,6 +144,7 @@ influenceJB <- function (model, group = NULL, select = NULL, obs = FALSE, gf = "
           registerDoParallel(cl)
         } else {registerDoParallel()}
 
+        clusterCall(cl, function(x) {.libPaths(x)}, .libPaths())
 
         model.updated <-
           foreach (i=1:n.obs, .inorder=F, .packages=c('lme4'),

@@ -1,7 +1,7 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                             ## June 2, 2015 ##
+                            ## February 2, 2016 ##
 
 ###############################################################################
 
@@ -57,10 +57,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   library(lattice, quietly=T)
   #Depending on call, may load lme4, nlme, glmmADMB, rmarkdown, HLMdiag or rsquaredglmm.R
 
-
   print(summary(M))
 
-  if(!'glm' %in% class(M)){
+  if(!any(c('glm','glmmadmb') %in% class(M))){
 
     try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
 
@@ -106,6 +105,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   ###### Extract Model Formula, Terms ######
 
   if('glm' %in% class(M)){
+
+    if(missing(dat)) {dat <- M$data}
+
     fixvar <- attributes(M$terms)$term.labels
     Mterms <- fixvar[-grep(':', fixvar)]
     randvar <- NA
@@ -121,6 +123,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   if(class(M)=="lmerMod" | class(M)=="glmerMod") {
 
     library(lme4)
+
+    #Retrieve data
+    if(missing(dat)) {dat <- M@frame}
 
     #Set response variable
     if(is.na(respvar)) { respvar <- names(M@frame)[1] }
@@ -150,6 +155,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     library(nlme)
 
+    if(missing(dat)) {dat <- M$data}
+
     if(is.na(respvar)) { respvar <- as.character(attributes(M$terms)$variables[2]) }
 
     fixvar <- attributes(M$terms)$term.labels
@@ -177,6 +184,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     library(nlme)
 
+    if(missing(dat)) {dat <- M$data}
+
     fixvar <- names(M$parAssign)[!names(M$parAssign) %in% "(Intercept)"]
     Mterms <- names(M$parAssign)[-grep(names(M$parAssign), pattern=":")][-1]
     randvar <- NA
@@ -186,6 +195,11 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   if(class(M)=='glmmadmb') {
 
     library(glmmADMB)
+
+    if(missing(dat)) {
+      dat <- M$frame
+      warning('Data should be provided as an argument for glmmadmb models')}
+
 
     #Set response variable
     if(is.na(respvar)) { respvar <- names(M$frame)[1] }
@@ -214,7 +228,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   ##### Prep Data #####
 
   dat$Fit <- fitted(M)
-  dat$Resid <- if(class(M)=='glmmADMB') {as.vector(M$residuals)} else {resid(M)}
+  dat$Resid <- if(class(M)=='glmmadmb') {as.vector(M$residuals)} else {resid(M)}
   #for lme4 = deviance resids, for glmmadmb = pearson
   #not sure why but resid() isn't working for glmmadmb
   dat$MU <- dat[,min.unit]
@@ -244,7 +258,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   for (i in Mterms){
 
-    if(class(dat[,i])=="character") { dat[,i] <- factor(dat[,i]) }
+    if(any(class(dat[,i])=="character")) { dat[,i] <- factor(dat[,i]) }
 
     plot(x = dat[,i], y = dat[,respvar], ylab = respvar, xlab = i,
          main = paste('Plot of Raw Data'))
@@ -465,7 +479,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   if(infl){
 
-    if(!'influenceJB' %in% ls() & jb){
+    if(!'influenceJB' %in% ls() & (jb|parallel)){
       source(paste(to.files, "InfluenceJB.R", sep=""))
     }
     #If not already loaded, will load InfluenceJB.R to calc infl for model w/ weights

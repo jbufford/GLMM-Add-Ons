@@ -157,7 +157,7 @@ merge.ci <- function(ci.list, ci.names, GraphN){
 
 
 plot.coef <- function(dat, get.ci=T, CodeN, GraphN, ci.names,
-                      facet.scale = 'free', intercept = T, ...){
+                      facet.scale = 'free', intercept = T, return.plot=F, ...){
 
   library(ggplot2)
   library(grid)
@@ -194,19 +194,19 @@ plot.coef <- function(dat, get.ci=T, CodeN, GraphN, ci.names,
 
   if(class(dat)=="list" & class(dat[[1]]) %in% c("list",'boot')){
 
-    print(
-      coef.plot + geom_point(size=4) +
-        geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15)) +
-        facet_grid(.~Var, scales = facet.scale)
-    )
+    coef.plot <- coef.plot + geom_point(size=4) + facet_grid(.~Var, scales =facet.scale) +
+      geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15))
+
+    if(return.plot) {return(coef.plot)} else {print(coef.plot)}
+
   } else {
 
-    print(
-      coef.plot + geom_point(size=4) +
-        geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15))
-    )
-  }
+    coef.plot <- coef.plot + geom_point(size=4) +
+      geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15))
 
+    if(return.plot) {return(coef.plot)} else {print(coef.plot)}
+
+  }
 }
 
 

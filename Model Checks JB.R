@@ -1,7 +1,7 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                            ## February 2, 2016 ##
+                            ## February 16, 2016 ##
 
 ###############################################################################
 
@@ -232,6 +232,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   #for lme4 = deviance resids, for glmmadmb = pearson
   #not sure why but resid() isn't working for glmmadmb
   dat$MU <- dat[,min.unit]
+  dat$RespVar <- dat[,respvar]
 
 
   ###### Create PDF ######
@@ -282,6 +283,19 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
          main = 'Plot of Residuals to Check for Homoscedasticity')
     abline(h=0)
   }
+
+
+  ##### Plot Fits vs. Observed #####
+
+  print(
+  ggplot(dat, aes(x=RespVar, y = Fit)) + geom_point(size=3) +
+    geom_abline(aes(intercept=0, slope=1), linetype=2) +
+    xlab(paste("Observed", respvar)) + ylab(paste("Predicted", respvar)) + theme_bw() +
+    scale_y_continuous(expand=c(0.005,0.005)) + scale_x_continuous(expand=c(0.005,0.005))+
+    theme(panel.grid = element_blank(), panel.border=element_blank(),
+          axis.line=element_line(color='black'), axis.text = element_text(size = 14),
+          axis.title = element_text(size = 16))
+  )
 
 
   ###### Levene's Test ######
@@ -392,7 +406,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ##### Plot Coefficients #####
 
-  if((class(M)=="lmerMod" | class(M)=="glmerMod") & length(fixvar)>0) {
+  if(class(M) %in% c("lmerMod", "glmerMod", 'glm','glmmadmb') & length(fixvar)>0) {
     print(coefplot(M)) }
 
 
@@ -446,6 +460,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   avPlots(lmm, id.method="mahal", id.n=3,
           main="Added-Variable plots of LM on Fixed Effects Only")
 
+  par(mfrow = c(1,1))
+
   }
 
 
@@ -466,6 +482,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(class(M)[1]=='glm'){
       class(M) <- 'glm'
     }
+
+    par(mfrow = c(1,1))
   }
 
 

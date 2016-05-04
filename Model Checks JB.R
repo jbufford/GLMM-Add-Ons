@@ -132,7 +132,15 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     #Set random variable(s) and min.unit
     randvar <- names(M@flist)
-    if(is.na(min.unit)) {min.unit <- randvar[1]}
+
+    if(is.na(min.unit) & length(randvar)==1) {min.unit <- randvar}
+    if(is.na(min.unit)) {
+      min.unit <- apply(dat[,randvar], MARGIN=2, FUN=function(x) {length(unique(x))})
+      if(any(min.unit<nrow(dat))){
+        min.unit <- names(min.unit[min.unit<nrow(dat)]) #prevents ID from being min.unit
+        min.unit <- min.unit[1]
+      } else {min.unit <- randvar[1]}
+    }
 
     #Set fixed variables (excludes interactions)
     fixvar <- attributes(terms(M@frame))$term.labels
@@ -407,7 +415,10 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   ##### Plot Coefficients #####
 
   if(class(M) %in% c("lmerMod", "glmerMod", 'glm','glmmadmb') & length(fixvar)>0) {
-    print(coefplot(M)) }
+    print(coefplot(M) + theme_bw() +
+            theme(panel.grid=element_blank(), axis.title=element_blank())
+    )
+  }
 
 
   ###### Create Linear Model on Fixed Effects ######

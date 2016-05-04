@@ -60,7 +60,7 @@ bootm <- function(dat, i, M, min.unit=NA, min.reps=0) {
 ##### Extract CI from Bootstrap or MCMC #######################################
 
 
-getci <- function(dat, CodeN, GraphN){
+getci <- function(dat, CodeN, GraphN, boot.type='norm'){
 
   if(class(dat)=='boot'){
 
@@ -70,7 +70,7 @@ getci <- function(dat, CodeN, GraphN){
     dat <- list()
 
     for(i in 1:length(dat.bt$t0)) {
-      dat[[i]] <- boot.ci(dat.bt, index=i, type=c("norm", "basic"))
+      dat[[i]] <- boot.ci(dat.bt, index=i, type=boot.type)
       names(dat)[i] <- names(dat.bt$t0)[i]
     }
   }
@@ -80,8 +80,9 @@ getci <- function(dat, CodeN, GraphN){
 
     for(i in names(dat)){
 
-      x <- data.frame("Coef"=dat[[i]]$t0, "LowCI"=dat[[i]]$normal[2],
-                      "HiCI"=dat[[i]]$normal[3])
+      x <- data.frame("Coef"=dat[[i]]$t0,
+                      "LowCI"=unlist(dat[[i]][4])[length(unlist(dat[[i]][4]))-1],
+                      "HiCI"=unlist(dat[[i]][4])[length(unlist(dat[[i]][4]))])
       x$Sig <- ifelse((x$HiCI<0 | x$LowCI>0), "sig", 'NS')
 
       if(!missing(CodeN) & !missing(GraphN)){
@@ -156,7 +157,7 @@ merge.ci <- function(ci.list, ci.names, GraphN){
 ##### Plot Coefs ##############################################################
 
 
-plot.coef <- function(dat, get.ci=T, CodeN, GraphN, ci.names,
+plot.coef <- function(dat, get.ci=T, boot.type='norm', CodeN, GraphN, ci.names,
                       facet.scale = 'free', intercept = T, return.plot=F, ...){
 
   library(ggplot2)
@@ -168,7 +169,7 @@ plot.coef <- function(dat, get.ci=T, CodeN, GraphN, ci.names,
 
     if(get.ci){
       for(i in 1:length(dat)){
-        datl[[i]] <- getci(dat[[i]], CodeN, GraphN)
+        datl[[i]] <- getci(dat[[i]], CodeN, GraphN, boot.type)
       }
     }
 
@@ -176,7 +177,7 @@ plot.coef <- function(dat, get.ci=T, CodeN, GraphN, ci.names,
 
   } else {
 
-    if(get.ci){ toplot <- getci(dat, CodeN, GraphN) } else { toplot <- dat }
+    if(get.ci){ toplot <- getci(dat, CodeN, GraphN, boot.type) } else { toplot <- dat }
   }
 
   if(!intercept) {

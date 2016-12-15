@@ -1,7 +1,7 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                            ## February 16, 2016 ##
+                             ## Dec 15, 2016 ##
 
 ###############################################################################
 
@@ -57,24 +57,39 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   library(lattice, quietly=T)
   #Depending on call, may load lme4, nlme, glmmADMB, rmarkdown, HLMdiag or rsquaredglmm.R
 
+  #Attractive theme for ggplot plots
+  theme_jb <- function (base_size = 12, base_family = "") {
+    theme_grey(base_size = base_size, base_family = base_family) %+replace%
+      theme(axis.text = element_text(size = 14), axis.title=element_text(size=16),
+            axis.ticks=element_line(colour="black"),
+            axis.line.x=element_line(color='black'),
+            axis.line.y=element_line(color='black'),
+            legend.key = element_rect(colour = "black"), panel.margin.x = unit(3, 'mm'),
+            panel.background = element_rect(fill = "white", colour = NA),
+            panel.border = element_blank(), panel.grid = element_blank(),
+            strip.text = element_text(size=16), strip.text.y = element_text(angle=0),
+            strip.background = element_rect(fill=NA, colour=NA, size = 0.2))
+  }
+
+
   print(summary(M))
 
   if(!any(c('glm','glmmadmb') %in% class(M))){
 
     try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
 
-    print('R-Squared Values:')
+    cat('\nR-Squared Values:\n')
     try(print(r.squared(M)))
 
-    print('Wald Chi-Square Test:')
+    cat('\nWald Chi-Square Test:\n')
     print(Anova(M))
   }
 
   if('glm' %in% class(M)){
-    print('Pseudo R-Squared (explained deviance):')
+    cat('\nPseudo R-Squared (explained deviance):\n')
     print(1-M$deviance/M$null.deviance)
 
-    print('F-Test with Dispersion Estimate Based on Pearson Residuals:')
+    cat('F-Test with Dispersion Estimate Based on Pearson Residuals:\n')
     print(Anova(M))
   }
 
@@ -109,18 +124,17 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(missing(dat)) {dat <- M$data}
 
     fixvar <- attributes(M$terms)$term.labels
-    Mterms <- fixvar[-grep(':', fixvar)]
+    Mterms <- fixvar[!grepl(':', fixvar)]
     randvar <- NA
     if(is.na(respvar)) { respvar <- names(M$model[1]) }
     fam <- M$family$family
 
     do.lm <- F
-    class(M) <- 'glm'
 
     if(is.na(min.unit)){return('Please specify a minimum unit for graphing.')}
   }
 
-  if(class(M)=="lmerMod" | class(M)=="glmerMod") {
+  if(any(class(M) %in% c("lmerMod","glmerMod"))) {
 
     library(lme4)
 
@@ -156,10 +170,10 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(sum(grepl("offset", Mterms))>0) {
       jb <- T
       Mterms <- gsub('offset\\(|\\)',"",Mterms[!(Mterms %in% "(offset)")])}
-    if(class(M)=="glmerMod") { fam <- M@resp$family[[1]] }
+    if("glmerMod" %in% class(M)) { fam <- M@resp$family[[1]] }
   }
 
-  if(class(M)=="lme") {
+  if("lme" %in% class(M)) {
 
     library(nlme)
 
@@ -188,7 +202,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(is.na(min.unit)) {min.unit <- randvar[1]}
   }
 
-  if(class(M)=='gls') {
+  if('gls' %in% class(M)) {
 
     library(nlme)
 
@@ -200,7 +214,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(is.na(min.unit)){return('Please specify a minimum unit for graphing.')}
   }
 
-  if(class(M)=='glmmadmb') {
+  if('glmmadmb' %in% class(M)) {
 
     library(glmmADMB)
 
@@ -236,7 +250,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   ##### Prep Data #####
 
   dat$Fit <- fitted(M)
-  dat$Resid <- if(class(M)=='glmmadmb') {as.vector(M$residuals)} else {resid(M)}
+  dat$Resid <- if('glmmadmb' %in% class(M)) {as.vector(M$residuals)} else {resid(M)}
   #for lme4 = deviance resids, for glmmadmb = pearson
   #not sure why but resid() isn't working for glmmadmb
   dat$MU <- dat[,min.unit]
@@ -270,7 +284,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(any(class(dat[,i])=="character")) { dat[,i] <- factor(dat[,i]) }
 
     plot(x = dat[,i], y = dat[,respvar], ylab = respvar, xlab = i,
-         main = paste('Plot of Raw Data'))
+         main = paste('Plot of Raw Data:', i))
   }
 
 
@@ -280,7 +294,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
        ylab='Residuals')
   qqnorm(dat$Resid, main = 'Normal Q-Q Plot of Residuals')
 
-#   if(class(M)=="lme") { print(qqnorm(M, ~resid(.)|MU)) }
+#   if("lme" %in% class(M)) { print(qqnorm(M, ~resid(.)|MU)) }
 
 
   ###### Plot Residuals for Homoscedacticity ######
@@ -298,11 +312,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   print(
   ggplot(dat, aes(x=RespVar, y = Fit)) + geom_point(size=3) +
     geom_abline(aes(intercept=0, slope=1), linetype=2) +
-    xlab(paste("Observed", respvar)) + ylab(paste("Predicted", respvar)) + theme_bw() +
+    xlab(paste("Observed", respvar)) + ylab(paste("Predicted", respvar)) +
     scale_y_continuous(expand=c(0.005,0.005)) + scale_x_continuous(expand=c(0.005,0.005))+
-    theme(panel.grid = element_blank(), panel.border=element_blank(),
-          axis.line=element_line(color='black'), axis.text = element_text(size = 14),
-          axis.title = element_text(size = 16))
+    theme_jb()
   )
 
 
@@ -310,13 +322,13 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   for (i in Mterms) {
 
-    print(i)
+    cat('\n',i,'\n')
     if(!is.factor(dat[,i])){
-      print("Not a Factor, Levene's Test Not Applicable")
+      cat("Not a Factor, Levene's Test Not Applicable\n")
       next
     }
 
-    if(length(levels(dat[,i]))<2) {print("Single-level Factor"); next}
+    if(length(levels(dat[,i]))<2) {cat("Single-level Factor\n"); next}
     print(leveneTest(dat$Resid, dat[,i]))
   }
 
@@ -335,7 +347,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   print(
     ggplot(MSDR, aes(x = Mean, y = SD)) +
-      scale_y_continuous(expand=c(0,0.005)) + theme_bw() +
+      scale_y_continuous(expand=c(0,0.005)) + theme_jb() +
       geom_smooth(aes(group=1)) +
       geom_text(aes(label=U)) + xlab('Mean of Residuals') +ylab('Std Dev of Residuals')+
       annotate("text", x = mean(MSDR$Mean), y = max(MSDR$SD)*0.95,
@@ -348,7 +360,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   print(
     ggplot(dat, aes(x = Fit, y = abs(Resid))) +
-      scale_y_continuous(expand=c(0,0.005)) + theme_bw() +
+      scale_y_continuous(expand=c(0,0.005)) + theme_jb() +
       geom_point() + geom_smooth(aes(group=1)) +
       annotate("text", x = mean(dat$Fit), y = max(abs(dat$Resid))*0.95,
                label=paste("Spearman:", round(cor(dat$Fit, abs(dat$Resid),
@@ -358,24 +370,24 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ##### Check for Overdispersion #####
 
-  if(class(M) %in% c("glmerMod","glmmadmb",'glm')) {
+  if(any(class(M) %in% c("glmerMod","glmmadmb",'glm'))) {
 
     if(fam %in% c("poisson", 'binomial')) {
 
-      if(class(M)=='glm'){
-        print('Test for Overdispersion:')
+      if('glm' %in% class(M)){
+        cat('\nTest for Overdispersion:\n')
         print(M$deviance/M$df.residual)
-        print('(should be close to 1)')
+        cat('\n(should be close to 1)\n')
       }
 
-      if(class(M) %in% c('glmerMod','glmmadmb')){
+      if(any(class(M) %in% c('glmerMod','glmmadmb'))){
         rdf <- nrow(model.frame(M)) -
           (sum(sapply(VarCorr(M),FUN=function(x){nrow(x)*(nrow(x)+1)/2}))
            + length(fixef(M)))
         rp <- residuals(M, type="pearson")
         pval <- pchisq(sum(rp^2), df=rdf, lower.tail=FALSE)
 
-        print('Test for Overdispersion:')
+        cat('\nTest for Overdispersion:\n')
         print(c(chisq=sum(rp^2),ratio=sum(rp^2)/rdf,rdf=rdf,p=pval))
       }
     }
@@ -386,27 +398,29 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ###### Leverage Plots ######
 
-  if(length(randvar) < 3 & class(M)=="lmerMod"){
+  if(length(randvar) < 3 & "lmerMod" %in% class(M)){
 
     library(HLMdiag, quietly=T)
 
-    dat <- cbind(dat, leverage(M, level=1))
+    if(class(try(leverage(M, level=1)))!='try-error'){
+      dat <- cbind(dat, leverage(M, level=1))
 
-    print(
+      print(
         ggplot(dat, aes(x = MU, y = overall)) +
           scale_y_continuous(name="Overall Leverage",expand=c(0,0.01)) +
-          theme_bw() + ggtitle("Leverage Plot for LMM") +
+          theme_jb() + ggtitle("Leverage Plot for LMM") +
           geom_point(size=4)
       )
     }
+  }
 
 
   ##### Plot Random Effects #####
 
-  if(class(M)=="lmerMod" | class(M)=="glmerMod") {
+  if(any(class(M) %in% c("lmerMod","glmerMod"))) {
     print(dotplot(ranef(M, condVar=T))) }
 
-  if(class(M)=='glmmadmb') {
+  if('glmmadmb' %in% class(M)) {
     re <- ranef(M, condVar=T)[[1]]
     re <- re[order(re),]
     print(dotplot(re))}
@@ -414,10 +428,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ##### Plot Coefficients #####
 
-  if(class(M) %in% c("lmerMod", "glmerMod", 'glm','glmmadmb') & length(fixvar)>0) {
-    print(coefplot(M) + theme_bw() +
-            theme(panel.grid=element_blank(), axis.title=element_blank())
-    )
+  if(any(class(M) %in% c("lmerMod", "glmerMod", 'glm','glmmadmb')) & length(fixvar)>0) {
+    print(coefplot(M) + theme_jb())
   }
 
 
@@ -434,7 +446,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     }
   }
 
-  if(class(M)=='lmerMod' | class(M)=="glmerMod") {
+  if(any(class(M) %in% c('lmerMod',"glmerMod"))) {
 
     if("(weights)" %in% names(M@frame)) {
 
@@ -457,7 +469,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   } else { lmm <- lm(modl, dat) }
 
-  print("Linear model for studentized residuals, added-variable plots:")
+  cat("\nLinear model for studentized residuals, added-variable plots:\n")
   print(summary(lmm))
 
 
@@ -478,11 +490,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ##### Additional Plots for (G)LM ######
 
-  if(class(M) %in% c('glm','lm')){
-
-    if(class(M)=='glm'){
-      class(M) <- c('glm','lm')
-    }
+  if(any(class(M) %in% c('glm','lm'))){
 
     plot(M)
 
@@ -490,17 +498,13 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     avPlots(M, id.method="mahal", id.n=3)
 
-    if(class(M)[1]=='glm'){
-      class(M) <- 'glm'
-    }
-
     par(mfrow = c(1,1))
   }
 
 
   ###### Influential Observations ######
 
-  if(infl & !(class(M)=='lmerMod' | class(M)=="glmerMod")) {
+  if(infl & !any(class(M) %in% c('lmerMod',"glmerMod"))) {
 
     warning(paste("Influence.ME is not implemented for", class(M)))
     infl <- F
@@ -513,6 +517,17 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     }
     #If not already loaded, will load InfluenceJB.R to calc infl for model w/ weights
 
+    if (min.unit %in% Mterms) {
+      Infl.mu <- if(jb|parallel) {
+        influenceJB(model=M, group=min.unit, parallel=parallel, ncpus=ncpus)
+      } else { influence(model = M, group = min.unit) }
+      plot(Infl.mu, which="cook", sort=T,
+           cutoff=(4/(length(unique(dat$MU))-length(c(fixvar,randvar))-1)),
+           main = paste("Cook's D by", min.unit))
+    } else {
+      cat('\nMinimum unit must be a model term to calculate influence\n')
+      Infl.mu <- NA
+    }
 
     if(infl.obs) {
 
@@ -522,26 +537,22 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       else { influence(model = M, obs=TRUE) }
 
       plot(Infl, which="cook", sort=T, cutoff=(4/(nrow(dat)-length(c(fixvar,randvar))-1)),
-           main="Cook's D")
+           main="Cook's D by Observation")
 
       plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar)) -1)),
            sort=T, to.sort=colnames(M@pp$X)[2], main="Dfbetas")
+
+      if(any(cooks.distance(Infl) > 0.1)){
+        cat("\nThe following observations have a Cook's D > 0.1:\n")
+        print(dat[cooks.distance(Infl) > 0.1,])
+
+        M2 <- update(M, .~., data=dat[cooks.distance(Infl) < 0.1,])
+        print(coefplot(M2) + theme_jb() +
+                ggtitle('Coefficients of Model without Influential Points'))
+      }
+
     }
 
-
-    if (min.unit %in% Mterms) {
-      Infl.mu <- if(jb|parallel) {
-        influenceJB(model=M, group=min.unit, parallel=parallel, ncpus=ncpus)
-        } else { influence(model = M, group = min.unit) }
-      plot(Infl.mu, which="cook", sort=T,
-           cutoff=(4/(length(unique(dat$MU))-length(c(fixvar,randvar))-1)),
-           main = paste("Cook's D by", min.unit))
-    } else {
-      print('Minimum unit must be a model term to calculate influence')
-      Infl.mu <- NA
-    }
-
-#     if(make.pdf & off) { dev.off() }
 
     if(infl.obs) { return(list(Infl, Infl.mu)) } else { return(Infl.mu) }
   }
@@ -551,79 +562,4 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   if(make.pdf & off) { dev.off() }
 
-}
-
-
-
-
-
-##### Levene's Tests ##########################################################
-
-
-levenes <- function(M, dat, extra=NULL) {
-
-  library(car)
-  library(stringr)
-
-
-  ###### Extract Model Formula, Terms ######
-
-  dat$Resid <- resid(M)
-
-  if(class(M)=="lmerMod" | class(M)=="glmerMod") {
-
-    Mterms <- names(M@frame)[2:length(names(M@frame))]
-    if("(weights)" %in% Mterms) {Mterms <- Mterms[!(Mterms %in% "(weights)")]}
-    if("(offset)" %in% Mterms) {Mterms <- Mterms[!(Mterms %in% "(offset)")]}
-  }
-
-  if(class(M)=="lme") {
-
-    #If there are fixed effects
-    if(length(attributes(M$terms)$term.labels) > 0) {
-      Mterms <- c(as.character(attributes(M$terms)$variables
-                               [3:length(attributes(M$terms)$variables)]),
-                  attributes(M$modelStruct$reStruct)$names)
-    } else { #if there are no fixed effects except intercept
-      Mterms <- attributes(M$modelStruct$reStruct)$names
-    }
-  }
-
-  if(class(M)=='gls') {
-
-    Mterms <- names(M$parAssign)[-grep(names(M$parAssign), pattern=":")][-1]
-  }
-
-  if(class(M)=='glmmadmb') {
-
-    Mterms <- c(names(M$frame)[2:length(M$frame)], names(M$S))
-    #     if("(weights)" %in% Mterms) {Mterms <- Mterms[!(Mterms %in% "(weights)")]}
-    #     if("(offset)" %in% Mterms) {Mterms <- Mterms[!(Mterms %in% "(offset)")]}
-    if(is.na(dat$Resid[1])) {print("manual"); dat$Resid <- as.vector(M$residuals)}
-  }
-
-
-  ##### Calculate Levene's Test #####
-
-  print("Residals")
-
-  for (i in Mterms) {
-
-    print(i)
-    if(!is.factor(dat[,i])){
-      print("Not a Factor, Levene's Test Not Applicable")
-      next
-    }
-
-    if(length(levels(dat[,i]))<2) {print("Single-level Factor"); next}
-    print(leveneTest(dat$Resid, dat[,i]))
-  }
-
-  if(length(extra)>0) {
-    for(i in extra) {
-
-      print(i)
-      print(leveneTest(dat$Resid, dat[,i]))
-    }
-  }
 }

@@ -1,7 +1,7 @@
 ########################### Graphing (G)LMM Results ###########################
                             ## Jennifer Bufford ##
                       ## jennifer.bufford@lincoln.ac.nz ##
-                             ## July 1, 2015 ##
+                             ## July 6, 2016 ##
 
 ###############################################################################
 
@@ -15,7 +15,8 @@
 
 #Bootstrap function bootstraps data/model to generate 95% CI
 #   Re-runs if model was unstable and didn't work
-#   Optionally, re-samples if data did not include a min number of reps in every level of #       a variable (although that doesn't seem to help)
+#   Optionally, re-samples if data did not include a min number of reps in every level of
+#       a variable (although that doesn't seem to help)
 #getci takes a boot object or a list from boot.ci or a data.frame from as.mcmc
 #         creates a data.frame of variable names (for graphing) and coef and 95% CI
 #merge.ci takes a list of data.frames with CI and a vector of names
@@ -60,7 +61,7 @@ bootm <- function(dat, i, M, min.unit=NA, min.reps=0) {
 ##### Extract CI from Bootstrap or MCMC #######################################
 
 
-getci <- function(dat, CodeN, GraphN, boot.type='norm'){
+getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
 
   if(class(dat)=='boot'){
 
@@ -112,7 +113,32 @@ getci <- function(dat, CodeN, GraphN, boot.type='norm'){
 
       dat$CName <-factor(dat$CName, levels=unique(GraphN[GraphN %in% dat$CName]),
                          order=T)
-    }
+    } else {dat$CName <- dat$CMName}
+
+    return(dat)
+  }
+
+    if(class(dat)=='matrix') { #to process output from confint.merMod
+
+      if(missing(mod)) {stop('Model required to process output from confint.merMod')}
+
+      dat <- data.frame(dat)
+      dat$CMName <- rownames(dat)
+      dat <- dat[dat$CMName %in% names(fixef(mod)),]
+      dat$Coef <- fixef(mod)
+      names(dat)[1:2] <- c('LowCI','HiCI')
+
+      dat$Sig <- ifelse((dat$HiCI<0 | dat$LowCI>0), "sig", 'NS')
+
+      if(!missing(CodeN) & !missing(GraphN)){
+        for (i in dat$CMName) {
+
+          dat[dat$CMName==i, "CName"] <- as.character(GraphN[which(CodeN==i)])
+        }
+
+        dat$CName <-factor(dat$CName, levels=unique(GraphN[GraphN %in% dat$CName]),
+                           order=T)
+      } else {dat$CName <- dat$CMName}
 
     return(dat)
   }
@@ -157,43 +183,61 @@ merge.ci <- function(ci.list, ci.names, GraphN){
 ##### Plot Coefs ##############################################################
 
 
-plot.coef <- function(dat, get.ci=T, boot.type='norm', CodeN, GraphN, ci.names,
+plot.coef <- function(dat, get.ci=T, boot.type='perc', CodeN, GraphN, mod, ci.names,
                       facet.scale = 'free', intercept = T, return.plot=F, ...){
 
   library(ggplot2)
   library(grid)
 
-  if(class(dat)=="list" & class(dat[[1]]) %in% c("list", 'boot')){
+  #Attractive theme for ggplot
+  theme_jb <- function (base_size = 12, base_family = "") {
+    theme_grey(base_size = base_size, base_family = base_family) %+replace%
+      theme(axis.text = element_text(size = 14), axis.title=element_text(size=16),
+            axis.ticks=element_line(colour="black"),
+            axis.line.x=element_line(color='black'),
+            axis.line.y=element_line(color='black'),
+            legend.key = element_rect(colour = "black"), panel.margin.x = unit(3, 'mm'),
+            panel.background = element_rect(fill = "white", colour = NA),
+            panel.border = element_blank(), panel.grid = element_blank(),
+            strip.text = element_text(size=16), strip.text.y = element_text(angle=0),
+            strip.background = element_rect(fill=NA, colour=NA, size = 0.2))
+  }
+
+  if(class(dat)=="list"){
 
     datl <- list()
 
     if(get.ci){
+
+      if(!missing(mod) & class(dat[[1]])=='matrix'){
+        if(length(mod)<length(dat)) {stop('Must provide a model for each confint object listed in the same order as the confint objects')}
+      }
+
       for(i in 1:length(dat)){
-        datl[[i]] <- getci(dat[[i]], CodeN, GraphN, boot.type)
+
+        if(!missing(mod)) {
+          datl[[i]] <- getci(dat[[i]], CodeN, GraphN, mod=mod[[i]], boot.type)
+        }
+        else { datl[[i]] <- getci(dat[[i]], CodeN, GraphN, mod, boot.type) }
       }
     }
 
-    toplot <- merge.ci(datl, ci.names, GraphN)
+      toplot <- merge.ci(datl, ci.names, GraphN)
 
-  } else {
+    } else {
 
-    if(get.ci){ toplot <- getci(dat, CodeN, GraphN, boot.type) } else { toplot <- dat }
-  }
+      if(get.ci){ toplot <- getci(dat, CodeN, GraphN, mod, boot.type) } else {toplot<-dat}
+    }
 
   if(!intercept) {
     toplot <- toplot[!toplot$CName %in% c('Intercept','(Intercept)','intercept'),]}
 
   coef.plot <- ggplot(data=toplot, aes(x=Coef, y=CName, shape=Sig)) +
     scale_color_manual(guide=F, name="Significance") +
-    xlab("Effect Size") + ylab("") + theme_bw() + geom_vline(aes(xintercept=0)) +
-    scale_shape_manual(guide=F, values=c(1,16)) +
-    theme(panel.grid = element_blank(),
-          axis.text = element_text(size = 14), axis.title = element_text(size = 16),
-          strip.text = element_text(size=16),
-          strip.background = element_rect(fill="white", color="White"),
-          panel.margin.x = unit(3, 'mm'), ...)
+    xlab("Effect Size") + ylab("") + geom_vline(aes(xintercept=0)) +
+    scale_shape_manual(guide=F, values=c(1,16)) + theme_jb()
 
-  if(class(dat)=="list" & class(dat[[1]]) %in% c("list",'boot')){
+  if(class(dat)=="list"){
 
     coef.plot <- coef.plot + geom_point(size=4) + facet_grid(.~Var, scales =facet.scale) +
       geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15))

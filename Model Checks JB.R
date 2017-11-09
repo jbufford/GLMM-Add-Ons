@@ -1,7 +1,7 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                             ## Dec 15, 2016 ##
+                             ## May 24, 2017 ##
 
 ###############################################################################
 
@@ -64,13 +64,15 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
             axis.ticks=element_line(colour="black"),
             axis.line.x=element_line(color='black'),
             axis.line.y=element_line(color='black'),
-            legend.key = element_rect(colour = "black"), panel.margin.x = unit(3, 'mm'),
+            legend.key = element_rect(colour = "black"), panel.spacing.x = unit(3, 'mm'),
             panel.background = element_rect(fill = "white", colour = NA),
             panel.border = element_blank(), panel.grid = element_blank(),
             strip.text = element_text(size=16), strip.text.y = element_text(angle=0),
             strip.background = element_rect(fill=NA, colour=NA, size = 0.2))
   }
 
+  
+  ###### Print Summary, R-Squared, Wald Test ######
 
   print(summary(M))
 
@@ -146,6 +148,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     #Set random variable(s) and min.unit
     randvar <- names(M@flist)
+    if(any(grepl(':', randvar))) {randvar <- sub(':[[:print:]]*', '', randvar)} 
+    #get lowest level of nested random effects
 
     if(is.na(min.unit) & length(randvar)==1) {min.unit <- randvar}
     if(is.na(min.unit)) {
@@ -313,7 +317,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   ggplot(dat, aes(x=RespVar, y = Fit)) + geom_point(size=3) +
     geom_abline(aes(intercept=0, slope=1), linetype=2) +
     xlab(paste("Observed", respvar)) + ylab(paste("Predicted", respvar)) +
-    scale_y_continuous(expand=c(0.005,0.005)) + scale_x_continuous(expand=c(0.005,0.005))+
+    scale_y_continuous(expand=c(0.005,0)) + scale_x_continuous(expand=c(0.005,0))+
     theme_jb()
   )
 
@@ -347,7 +351,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   print(
     ggplot(MSDR, aes(x = Mean, y = SD)) +
-      scale_y_continuous(expand=c(0,0.005)) + theme_jb() +
+      scale_y_continuous(expand=c(0.005,0)) + theme_jb() +
       geom_smooth(aes(group=1)) +
       geom_text(aes(label=U)) + xlab('Mean of Residuals') +ylab('Std Dev of Residuals')+
       annotate("text", x = mean(MSDR$Mean), y = max(MSDR$SD)*0.95,
@@ -360,7 +364,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   print(
     ggplot(dat, aes(x = Fit, y = abs(Resid))) +
-      scale_y_continuous(expand=c(0,0.005)) + theme_jb() +
+      scale_y_continuous(expand=c(0.005,0)) + theme_jb() +
       geom_point() + geom_smooth(aes(group=1)) +
       annotate("text", x = mean(dat$Fit), y = max(abs(dat$Resid))*0.95,
                label=paste("Spearman:", round(cor(dat$Fit, abs(dat$Resid),
@@ -400,7 +404,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   if(length(randvar) < 3 & "lmerMod" %in% class(M)){
 
-    library(HLMdiag, quietly=T)
+    try(library(HLMdiag, quietly=T))
 
     if(class(try(leverage(M, level=1)))!='try-error'){
       dat <- cbind(dat, leverage(M, level=1))

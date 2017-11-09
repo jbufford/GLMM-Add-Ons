@@ -1,7 +1,7 @@
 ########################### Graphing (G)LMM Results ###########################
                             ## Jennifer Bufford ##
                       ## jennifer.bufford@lincoln.ac.nz ##
-                             ## July 6, 2016 ##
+                             ## July 17, 2017 ##
 
 ###############################################################################
 
@@ -196,7 +196,7 @@ plot.coef <- function(dat, get.ci=T, boot.type='perc', CodeN, GraphN, mod, ci.na
             axis.ticks=element_line(colour="black"),
             axis.line.x=element_line(color='black'),
             axis.line.y=element_line(color='black'),
-            legend.key = element_rect(colour = "black"), panel.margin.x = unit(3, 'mm'),
+            legend.key = element_rect(colour = "black"), panel.spacing.x = unit(3, 'mm'),
             panel.background = element_rect(fill = "white", colour = NA),
             panel.border = element_blank(), panel.grid = element_blank(),
             strip.text = element_text(size=16), strip.text.y = element_text(angle=0),

@@ -232,10 +232,12 @@ plot.coef <- function(dat, get.ci=T, boot.type='perc', CodeN, GraphN, mod, ci.na
   if(!intercept) {
     toplot <- toplot[!toplot$CName %in% c('Intercept','(Intercept)','intercept'),]}
 
+  SigShape <- sort(unique(ifelse(toplot$Sig=='NS', 1, 16)))
+
   coef.plot <- ggplot(data=toplot, aes(x=Coef, y=CName, shape=Sig)) +
     scale_color_manual(guide=F, name="Significance") +
     xlab("Effect Size") + ylab("") + geom_vline(aes(xintercept=0)) +
-    scale_shape_manual(guide=F, values=c(1,16)) + theme_jb()
+    scale_shape_manual(guide=F, values=SigShape) + theme_jb()
 
   if(class(dat)=="list"){
 

@@ -4,7 +4,7 @@ output: pdf_document
 classoption: landscape
 ---
 
-```{r, include=F}
+```{r, include=FALSE}
 # load("Model Checks JB.RData")
 ```
 
@@ -12,7 +12,7 @@ classoption: landscape
 ##`r Sys.Date()`
 
 
-```{r, echo=F, fig.width=10, fig.height=7}
+```{r, echo=FALSE, fig.width=10, fig.height=7}
 
 infldat <- model.check(M, dat, min.unit, make.pdf=F, make.markdown=F, name, infl, infl.obs, 
                        do.lm, off=T, respvar, extra, to.files="", parallel, ncpus)

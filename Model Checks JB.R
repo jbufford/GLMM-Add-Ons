@@ -72,30 +72,6 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   }
 
   
-  ###### Print Summary, R-Squared, Wald Test ######
-
-  print(summary(M))
-
-  if(!any(c('glm','glmmadmb') %in% class(M))){
-
-    try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
-
-    cat('\nR-Squared Values:\n')
-    try(print(r.squared(M)))
-
-    cat('\nWald Chi-Square Test:\n')
-    print(Anova(M))
-  }
-
-  if('glm' %in% class(M)){
-    cat('\nPseudo R-Squared (explained deviance):\n')
-    print(1-M$deviance/M$null.deviance)
-
-    cat('F-Test with Dispersion Estimate Based on Pearson Residuals:\n')
-    print(Anova(M))
-  }
-
-
   ###### Create Markdown PDF ######
 
   if (make.markdown) {
@@ -250,7 +226,34 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     fam <- M$family
   }
 
-
+  
+  ###### Print Summary, R-Squared, Wald Test ######
+  
+  print(summary(M))
+  
+  if(!any(c('glm','glmmadmb') %in% class(M))){
+    
+    try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
+    
+    cat('\nR-Squared Values:\n')
+    try(print(r.squared(M)))
+    
+    if(length(fixvar) > 0){
+      
+      cat('\nWald Chi-Square Test:\n')
+      print(Anova(M))
+    }
+  }
+  
+  if('glm' %in% class(M)){
+    cat('\nPseudo R-Squared (explained deviance):\n')
+    print(1-M$deviance/M$null.deviance)
+    
+    cat('F-Test with Dispersion Estimate Based on Pearson Residuals:\n')
+    print(Anova(M))
+  }
+  
+  
   ##### Prep Data #####
 
   dat$Fit <- fitted(M)

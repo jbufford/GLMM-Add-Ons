@@ -1,7 +1,7 @@
 ########################### Graphing (G)LMM Results ###########################
                             ## Jennifer Bufford ##
                       ## jennifer.bufford@lincoln.ac.nz ##
-                             ## July 17, 2017 ##
+                            ## October 24, 2018 ##
 
 ###############################################################################
 
@@ -87,15 +87,18 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
       x$Sig <- ifelse((x$HiCI<0 | x$LowCI>0), "sig", 'NS')
 
       if(!missing(CodeN) & !missing(GraphN)){
-        x$CName <- as.character(GraphN[which(CodeN==i)])
+        x$CName <- if(any(CodeN==i)){
+          as.character(GraphN[which(CodeN==i)])} else {i}
+
       } else { x$CName <- i }
 
       if(i==names(dat)[1]) {cidat <- x} else {cidat <- rbind(cidat, x)}
     }
 
     if(!missing(CodeN) & !missing(GraphN)){
-      cidat$CName <- factor(cidat$CName,
-                            levels=unique(GraphN[GraphN %in% cidat$CName]),order=T)
+      cidat$CName <- factor(cidat$CName, order=T,
+                         levels=unique(c(GraphN[GraphN %in% cidat$CName], cidat$CName)))
+
     }
 
     return(cidat)
@@ -108,11 +111,12 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
     if(!missing(CodeN) & !missing(GraphN)){
       for (i in dat$CMName) {
 
-        dat[dat$CMName==i, "CName"] <- as.character(GraphN[which(CodeN==i)])
+        dat[dat$CMName==i, "CName"] <- if(any(CodeN==i)){
+          as.character(GraphN[which(CodeN==i)])} else {i}
       }
 
-      dat$CName <-factor(dat$CName, levels=unique(GraphN[GraphN %in% dat$CName]),
-                         order=T)
+      dat$CName <-factor(dat$CName, order=T,
+                         levels=unique(c(GraphN[GraphN %in% dat$CName], dat$CName)))
     } else {dat$CName <- dat$CMName}
 
     return(dat)
@@ -133,11 +137,13 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
       if(!missing(CodeN) & !missing(GraphN)){
         for (i in dat$CMName) {
 
-          dat[dat$CMName==i, "CName"] <- as.character(GraphN[which(CodeN==i)])
+          dat[dat$CMName==i, "CName"] <- if(any(CodeN==i)) {
+            as.character(GraphN[which(CodeN==i)])} else {i}
         }
 
-        dat$CName <-factor(dat$CName, levels=unique(GraphN[GraphN %in% dat$CName]),
-                           order=T)
+        dat$CName <- factor(dat$CName, order=T,
+                            levels=unique(c(GraphN[GraphN %in% dat$CName], dat$CName)))
+
       } else {dat$CName <- dat$CMName}
 
     return(dat)
@@ -170,9 +176,9 @@ merge.ci <- function(ci.list, ci.names, GraphN){
   }
 
   if(!missing(GraphN)){
-    ci.merg$CName <- factor(ci.merg$CName,
-                            levels=unique(GraphN[GraphN %in% ci.merg$CName]),
-                            order=T)
+    ci.merg$CName <- factor(ci.merg$CName, order=T,
+                            levels=unique(c(GraphN[GraphN %in% ci.merg$CName],
+                                            as.character(ci.merg$CName))))
   }
 
   return(ci.merg)

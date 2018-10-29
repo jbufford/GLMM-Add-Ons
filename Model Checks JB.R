@@ -1,16 +1,16 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                             ## May 24, 2017 ##
+                             ## July 16, 2018 ##
 
 ###############################################################################
 
 #Input: A GLMM model, the data used to make the model, optional specifiers
 #       incl an optional name for the (optional) pdf file
 
-#Requires: car, coefplot, ggplot2, lattice
+#Requires: car, coefplot, ggplot2, lattice, piecewiseSEM
 #           and either lme4, nlme or glmmADMB
-#          Optional: influence.ME, InfluenceJB, rmarkdown, HLMDiag, rsquaredglmm.R
+#          Optional: influence.ME, InfluenceJB, rmarkdown, HLMDiag
 
 #Output: Model summary and R2
 #        Dotchart and qqplot of raw data
@@ -42,7 +42,7 @@
 
 model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="Model",
                         infl=F, infl.obs=F, do.lm=F, off=T, respvar=NA, extra=NULL,
-                        to.files="", parallel=F, ncpus=NULL){
+                        to.files="", parallel=F, ncpus=NULL, infl.th = NULL){
 
   if(to.files!="" & substr(to.files,nchar(to.files),nchar(to.files)) != "/"){
     to.files <- paste(to.files, "/", sep="")
@@ -55,7 +55,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   library(car, quietly=T)
   library(coefplot, quietly=T)
   library(lattice, quietly=T)
-  #Depending on call, may load lme4, nlme, glmmADMB, rmarkdown, HLMdiag or rsquaredglmm.R
+  library(piecewiseSEM, quietly = T)
+  #Depending on call, may load lme4, nlme, glmmADMB, rmarkdown, HLMdiag
 
   #Attractive theme for ggplot plots
   theme_jb <- function (base_size = 12, base_family = "") {
@@ -71,7 +72,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
             strip.background = element_rect(fill=NA, colour=NA, size = 0.2))
   }
 
-  
+
   ###### Create Markdown PDF ######
 
   if (make.markdown) {
@@ -124,7 +125,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     #Set random variable(s) and min.unit
     randvar <- names(M@flist)
-    if(any(grepl(':', randvar))) {randvar <- sub(':[[:print:]]*', '', randvar)} 
+    if(any(grepl(':', randvar))) {randvar <- sub(':[[:print:]]*', '', randvar)}
     #get lowest level of nested random effects
 
     if(is.na(min.unit) & length(randvar)==1) {min.unit <- randvar}
@@ -146,7 +147,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     #Deal with weights or offsets
     if("(weights)" %in% Mterms) {
       jb <- T
-      Mterms <- Mterms[!(Mterms %in% "(weights)")]}
+      Mterms <- Mterms[!(Mterms %in% "(weights)")]
+      names(dat)[names(dat)=="(weights)"] <- as.character(M@call$weights) }
+
     if(sum(grepl("offset", Mterms))>0) {
       jb <- T
       Mterms <- gsub('offset\\(|\\)',"",Mterms[!(Mterms %in% "(offset)")])}
@@ -165,9 +168,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     #If there are fixed effects
     if(length(attributes(M$terms)$term.labels) > 0) {
-      Mterms <- c(as.character(attributes(M$terms)$variables[3:
-                                            length(attributes(M$terms)$variables)]),
-                attributes(M$modelStruct$reStruct)$names, extra)
+      Mterms <- c(as.character(attributes(M$terms)$variables[
+        3:length(attributes(M$terms)$variables)]),
+        attributes(M$modelStruct$reStruct)$names, extra)
       if(sum(grepl("offset", Mterms))>0) {
         jb <- T
         Mterms <- gsub('offset\\(|\\)',"",Mterms[!(Mterms %in% "(offset)")])}
@@ -226,34 +229,33 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     fam <- M$family
   }
 
-  
+
   ###### Print Summary, R-Squared, Wald Test ######
-  
+
   print(summary(M))
-  
+
   if(!any(c('glm','glmmadmb') %in% class(M))){
-    
-    try(source(paste(to.files, 'rsquaredglmm.R', sep='')))
-    
+
     cat('\nR-Squared Values:\n')
-    try(print(r.squared(M)))
-    
+    try(print(sem.model.fits(M)), silent = T) #This works with < v 2.0
+    # try(print(rsquared(M)), silent = T) #This might work with v 2.0+?
+
     if(length(fixvar) > 0){
-      
+
       cat('\nWald Chi-Square Test:\n')
       print(Anova(M))
     }
   }
-  
+
   if('glm' %in% class(M)){
     cat('\nPseudo R-Squared (explained deviance):\n')
     print(1-M$deviance/M$null.deviance)
-    
+
     cat('F-Test with Dispersion Estimate Based on Pearson Residuals:\n')
     print(Anova(M))
   }
-  
-  
+
+
   ##### Prep Data #####
 
   dat$Fit <- fitted(M)
@@ -261,7 +263,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   #for lme4 = deviance resids, for glmmadmb = pearson
   #not sure why but resid() isn't working for glmmadmb
   dat$MU <- dat[,min.unit]
-  dat$RespVar <- dat[,respvar]
+  dat$RespVar <- as.numeric(dat[,respvar])
 
 
   ###### Create PDF ######
@@ -279,9 +281,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ###### Plot Raw Data ######
 
-  dotchart(dat[, respvar], xlab = respvar, main= paste("Cleveland Dotplot of", respvar))
+  dotchart(dat$RespVar, xlab = respvar, main= paste("Cleveland Dotplot of", respvar))
 
-  qqnorm(dat[, respvar], main = "Normal Q-Q Plot of Response Variable")
+  qqnorm(dat$RespVar, main = "Normal Q-Q Plot of Response Variable")
 
 
   ##### Plot Raw Terms #####
@@ -301,7 +303,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
        ylab='Residuals')
   qqnorm(dat$Resid, main = 'Normal Q-Q Plot of Residuals')
 
-#   if("lme" %in% class(M)) { print(qqnorm(M, ~resid(.)|MU)) }
+  #   if("lme" %in% class(M)) { print(qqnorm(M, ~resid(.)|MU)) }
 
 
   ###### Plot Residuals for Homoscedacticity ######
@@ -317,11 +319,11 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   ##### Plot Fits vs. Observed #####
 
   print(
-  ggplot(dat, aes(x=RespVar, y = Fit)) + geom_point(size=3) +
-    geom_abline(aes(intercept=0, slope=1), linetype=2) +
-    xlab(paste("Observed", respvar)) + ylab(paste("Predicted", respvar)) +
-    scale_y_continuous(expand=c(0.005,0)) + scale_x_continuous(expand=c(0.005,0))+
-    theme_jb()
+    ggplot(dat, aes(x=RespVar, y = Fit)) + geom_point(size=3) +
+      geom_abline(aes(intercept=0, slope=1), linetype=2) + geom_smooth(method='lm') +
+      xlab(paste("Observed", respvar)) + ylab(paste("Predicted", respvar)) +
+      scale_y_continuous(expand=c(0.005,0)) + scale_x_continuous(expand=c(0.005,0))+
+      theme_jb()
   )
 
 
@@ -359,8 +361,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       geom_text(aes(label=U)) + xlab('Mean of Residuals') +ylab('Std Dev of Residuals')+
       annotate("text", x = mean(MSDR$Mean), y = max(MSDR$SD)*0.95,
                label=paste("Spearman:", round(cor(MSDR$Mean, MSDR$SD,
-                              use="complete.obs", method="spearman"),2)))
-    )
+                                                  use="complete.obs", method="spearman"),2)))
+  )
 
 
   ###### Check for Var related to Fit ######
@@ -371,8 +373,8 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       geom_point() + geom_smooth(aes(group=1)) +
       annotate("text", x = mean(dat$Fit), y = max(abs(dat$Resid))*0.95,
                label=paste("Spearman:", round(cor(dat$Fit, abs(dat$Resid),
-                                  use="complete.obs", method="spearman"),2)))
-    )
+                                                  use="complete.obs", method="spearman"),2)))
+  )
 
 
   ##### Check for Overdispersion #####
@@ -446,51 +448,51 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     modl <- paste(respvar, " ~ ", fixvar[1])
 
-  if(length(fixvar) > 1){
+    if(length(fixvar) > 1){
 
-    for(i in 2:length(fixvar)){
-      modl <- paste(modl, "+ ", fixvar[i])
-    }
-  }
-
-  if(any(class(M) %in% c('lmerMod',"glmerMod"))) {
-
-    if("(weights)" %in% names(M@frame)) {
-
-      dat$Wts <- dat[,as.character(M@call$weights)]
-
-      if("(offset)" %in% names(M@frame)) {
-
-        lmm <- lm(modl, weights=Wts, offset=LM, dat)
-
-      } else {   lmm <- lm(modl, weights=Wts, dat)  }
-
-    } else {
-
-      if("(offset)" %in% names(M@frame)) {
-
-        lmm <- lm(modl, offset=LM, dat)
-
-      } else {  lmm <- lm(modl, dat) }
+      for(i in 2:length(fixvar)){
+        modl <- paste(modl, "+ ", fixvar[i])
+      }
     }
 
-  } else { lmm <- lm(modl, dat) }
+    if(any(class(M) %in% c('lmerMod',"glmerMod"))) {
 
-  cat("\nLinear model for studentized residuals, added-variable plots:\n")
-  print(summary(lmm))
+      if("(weights)" %in% names(M@frame)) {
+
+        dat$Wts <- dat[,as.character(M@call$weights)]
+
+        if("(offset)" %in% names(M@frame)) {
+
+          lmm <- lm(modl, weights=Wts, offset=LM, dat)
+
+        } else {   lmm <- lm(modl, weights=Wts, dat)  }
+
+      } else {
+
+        if("(offset)" %in% names(M@frame)) {
+
+          lmm <- lm(modl, offset=LM, dat)
+
+        } else {  lmm <- lm(modl, dat) }
+      }
+
+    } else { lmm <- lm(modl, dat) }
+
+    cat("\nLinear model for studentized residuals, added-variable plots:\n")
+    print(summary(lmm))
 
 
-  ###### Studentized Residuals (and Others) ######
+    ###### Studentized Residuals (and Others) ######
 
-  infIndexPlot(lmm, main="Diagnostic Plots of LM on Fixed Effects Only")
+    infIndexPlot(lmm, main="Diagnostic Plots of LM on Fixed Effects Only")
 
 
-  ###### Added-Variable (Partial Regression) Plots ######
+    ###### Added-Variable (Partial Regression) Plots ######
 
-  avPlots(lmm, id.method="mahal", id.n=3,
-          main="Added-Variable plots of LM on Fixed Effects Only")
+    avPlots(lmm, id.method="mahal", id.n=3,
+            main="Added-Variable plots of LM on Fixed Effects Only")
 
-  par(mfrow = c(1,1))
+    par(mfrow = c(1,1))
 
   }
 
@@ -549,11 +551,14 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar)) -1)),
            sort=T, to.sort=colnames(M@pp$X)[2], main="Dfbetas")
 
-      if(any(cooks.distance(Infl) > 0.1)){
-        cat("\nThe following observations have a Cook's D > 0.1:\n")
-        print(dat[cooks.distance(Infl) > 0.1,])
+      #Drop points over an influence threshold and refit model
+      if(is.null(infl.th)){ infl.th <- 4/(nrow(dat)-length(c(fixvar,randvar))-1) }
 
-        M2 <- update(M, .~., data=dat[cooks.distance(Infl) < 0.1,])
+      if(any(cooks.distance(Infl) > infl.th)){
+        cat(paste("\nThe following observations have a Cook's D >",infl.th,":\n"))
+        print(dat[cooks.distance(Infl) > infl.th,])
+
+        M2 <- update(M, .~., data=dat[cooks.distance(Infl) < infl.th,])
         print(coefplot(M2) + theme_jb() +
                 ggtitle('Coefficients of Model without Influential Points'))
       }

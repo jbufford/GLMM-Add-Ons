@@ -12,7 +12,7 @@
 #           and either lme4, nlme or glmmADMB
 #          Optional: influence.ME, InfluenceJB, rmarkdown, HLMDiag
 
-#Output: Model summary and R2
+#Output: Model summary and R2, Wald Test and LRT
 #        Dotchart and qqplot of raw data
 #        Graphs of all terms vs the response variable (raw data)
 #        Graphs of resids vs fits, resids as qqnorm
@@ -237,9 +237,10 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   if(!any(c('glm','glmmadmb') %in% class(M))){
 
     cat('\nR-Squared Values:\n')
-    try(print(sem.model.fits(M)), silent = T) #This works with < v 2.0
-    # try(print(rsquared(M)), silent = T) #This might work with v 2.0+?
-
+    if(packageVersion('piecewiseSEM') > 2){
+      try(print(rsquared(M)), silent = T) #This works with v 2.0+
+    } else {try(print(sem.model.fits(M)), silent = T) } #This works with < v 2.0
+    
     if(length(fixvar) > 0){
 
       cat('\nWald Chi-Square Test:\n')
@@ -264,6 +265,40 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   #not sure why but resid() isn't working for glmmadmb
   dat$MU <- dat[,min.unit]
   dat$RespVar <- as.numeric(dat[,respvar])
+
+
+  ##### LRT #####
+
+  ##This isn't working quite as it should w/ nested RE and interaction terms. Not helpful...
+  # print('Likelihood Ratio Test')
+  # for(i in Mterms){
+  #   print(i)
+  #   if(i %in% randvar){
+  # 
+  #     if(length(randvar)==1){
+  #       form2 <- formula(paste(paste(respvar, '~'),
+  #                              paste(Mterms[!Mterms %in% i], collapse=' + ')))
+  # 
+  #       M.wo.RE <- glm(form2, data=dat)
+  #       print(AIC(M, M.wo.RE))
+  #       next
+  # 
+  #     } else {
+  #       form2 <- formula(paste(paste(respvar, '~'),
+  #                              paste(Mterms[!Mterms %in% randvar], collapse=' + '),
+  #                              '+ (1|', paste(randvar[!randvar %in% i],
+  #                                             collapse=') + (1|'), ')'))
+  #       #note - this is currently not working for nested terms (not properly, anyway)
+  #     }
+  # 
+  #   } else {
+  #     form2 <- formula(paste(paste(respvar, '~'),
+  #                              paste(Mterms[!Mterms %in% c(randvar, i)], collapse=' + '),
+  #                              '+ (1|', paste(randvar, collapse=') + (1|'), ')'))
+  #   }
+  # 
+  #   print(anova(update(M, .~., data=dat), update(M, form2, data=dat)))
+  # }
 
 
   ###### Create PDF ######

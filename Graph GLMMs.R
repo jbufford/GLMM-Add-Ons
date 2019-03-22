@@ -1,7 +1,7 @@
 ########################### Graphing (G)LMM Results ###########################
                             ## Jennifer Bufford ##
                       ## jennifer.bufford@lincoln.ac.nz ##
-                            ## October 24, 2018 ##
+                            ## March 22, 2019 ##
 
 ###############################################################################
 
@@ -25,7 +25,7 @@
 
 ###############################################################################
 
-
+### WARNING: SOMETHING IS WRONG WITH PARTIAL MATCHING ORDER (see plasticity index script)
 
 ##### Bootstrap Function ######################################################
 
@@ -87,9 +87,24 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
       x$Sig <- ifelse((x$HiCI<0 | x$LowCI>0), "sig", 'NS')
 
       if(!missing(CodeN) & !missing(GraphN)){
-        x$CName <- if(any(CodeN==i)){
-          as.character(GraphN[which(CodeN==i)])} else {i}
-
+        
+        x$CName <- GraphN[match(x$CMName, CodeN)]
+        
+        if(any(is.na(x$CName))){
+          for (i in x[is.na(x$CName),'CMName']) {
+            if(grepl(':', i)) { 
+              xx <- unlist(strsplit(i, ':'))
+              yy <- GraphN[match(xx, CodeN)]
+              yy[is.na(yy)] <- xx[is.na(yy)]
+              yy <- yy[order(match(yy, GraphN))]
+              x[rownames(x)==i, 'CName'] <- paste(yy, collapse=' x ')
+            } else { x[rownames(x)==i, 'CName'] <- i }
+          }
+        }
+        
+        x$CName <- factor(x$CName, order=T,
+                            levels=unique(c(GraphN[GraphN %in% x$CName], x$CName)))
+        
       } else { x$CName <- i }
 
       if(i==names(dat)[1]) {cidat <- x} else {cidat <- rbind(cidat, x)}
@@ -109,14 +124,24 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
     dat$Sig <- ifelse((dat$HiCI<0 | dat$LowCI>0), "sig", 'NS')
 
     if(!missing(CodeN) & !missing(GraphN)){
-      for (i in dat$CMName) {
-
-        dat[dat$CMName==i, "CName"] <- if(any(CodeN==i)){
-          as.character(GraphN[which(CodeN==i)])} else {i}
+      
+      dat$CName <- GraphN[match(dat$CMName, CodeN)]
+      
+      if(any(is.na(dat$CName))){
+        for (i in dat[is.na(dat$CName),'CMName']) {
+          if(grepl(':', i)) { 
+            xx <- unlist(strsplit(i, ':'))
+            yy <- GraphN[match(xx, CodeN)]
+            yy[is.na(yy)] <- xx[is.na(yy)]
+            yy <- yy[order(match(yy, GraphN))]
+            dat[rownames(dat)==i, 'CName'] <- paste(yy, collapse=' x ')
+          } else { dat[rownames(dat)==i, 'CName'] <- i }
+        }
       }
-
-      dat$CName <-factor(dat$CName, order=T,
-                         levels=unique(c(GraphN[GraphN %in% dat$CName], dat$CName)))
+      
+      dat$CName <- factor(dat$CName, order=T,
+                          levels=unique(c(GraphN[GraphN %in% dat$CName], dat$CName)))
+      
     } else {dat$CName <- dat$CMName}
 
     return(dat)
@@ -135,12 +160,21 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
       dat$Sig <- ifelse((dat$HiCI<0 | dat$LowCI>0), "sig", 'NS')
 
       if(!missing(CodeN) & !missing(GraphN)){
-        for (i in dat$CMName) {
-
-          dat[dat$CMName==i, "CName"] <- if(any(CodeN==i)) {
-            as.character(GraphN[which(CodeN==i)])} else {i}
+        
+        dat$CName <- GraphN[match(dat$CMName, CodeN)]
+        
+        if(any(is.na(dat$CName))){
+          for (i in dat[is.na(dat$CName),'CMName']) {
+            if(grepl(':', i)) { 
+              xx <- unlist(strsplit(i, ':'))
+              yy <- GraphN[match(xx, CodeN)]
+              yy[is.na(yy)] <- xx[is.na(yy)]
+              yy <- yy[order(match(yy, GraphN))]
+              dat[rownames(dat)==i, 'CName'] <- paste(yy, collapse=' x ')
+            } else { dat[rownames(dat)==i, 'CName'] <- i }
+          }
         }
-
+      
         dat$CName <- factor(dat$CName, order=T,
                             levels=unique(c(GraphN[GraphN %in% dat$CName], dat$CName)))
 

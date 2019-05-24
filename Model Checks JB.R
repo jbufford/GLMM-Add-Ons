@@ -1,7 +1,7 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                             ## July 16, 2018 ##
+                             ## May 24, 2019 ##
 
 ###############################################################################
 
@@ -240,7 +240,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(packageVersion('piecewiseSEM') > 2){
       try(print(rsquared(M)), silent = T) #This works with v 2.0+
     } else {try(print(sem.model.fits(M)), silent = T) } #This works with < v 2.0
-    
+
     if(length(fixvar) > 0){
 
       cat('\nWald Chi-Square Test:\n')
@@ -274,15 +274,15 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   # for(i in Mterms){
   #   print(i)
   #   if(i %in% randvar){
-  # 
+  #
   #     if(length(randvar)==1){
   #       form2 <- formula(paste(paste(respvar, '~'),
   #                              paste(Mterms[!Mterms %in% i], collapse=' + ')))
-  # 
+  #
   #       M.wo.RE <- glm(form2, data=dat)
   #       print(AIC(M, M.wo.RE))
   #       next
-  # 
+  #
   #     } else {
   #       form2 <- formula(paste(paste(respvar, '~'),
   #                              paste(Mterms[!Mterms %in% randvar], collapse=' + '),
@@ -290,13 +290,13 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   #                                             collapse=') + (1|'), ')'))
   #       #note - this is currently not working for nested terms (not properly, anyway)
   #     }
-  # 
+  #
   #   } else {
   #     form2 <- formula(paste(paste(respvar, '~'),
   #                              paste(Mterms[!Mterms %in% c(randvar, i)], collapse=' + '),
   #                              '+ (1|', paste(randvar, collapse=') + (1|'), ')'))
   #   }
-  # 
+  #
   #   print(anova(update(M, .~., data=dat), update(M, form2, data=dat)))
   # }
 
@@ -590,8 +590,10 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       if(is.null(infl.th)){ infl.th <- 4/(nrow(dat)-length(c(fixvar,randvar))-1) }
 
       if(any(cooks.distance(Infl) > infl.th)){
-        cat(paste("\nThe following observations have a Cook's D >",infl.th,":\n"))
-        print(dat[cooks.distance(Infl) > infl.th,])
+        cat(paste("\nThe following observations have Cook's D >",round(infl.th, 4),":\n"))
+        dat$CookD <- cooks.distance(Infl)
+        dat <- dat[order(dat$CookD, decreasing=T),]
+        print(dat[dat$CookD > infl.th,])
 
         M2 <- update(M, .~., data=dat[cooks.distance(Infl) < infl.th,])
         print(coefplot(M2) + theme_jb() +

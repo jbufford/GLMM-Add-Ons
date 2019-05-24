@@ -97,7 +97,7 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
               yy <- GraphN[match(xx, CodeN)]
               yy[is.na(yy)] <- xx[is.na(yy)]
               yy <- yy[order(match(yy, GraphN))]
-              x[rownames(x)==i, 'CName'] <- paste(yy, collapse=' x ')
+              x[rownames(x)==i, 'CName'] <- paste(yy, collapse='\nx ')
             } else { x[rownames(x)==i, 'CName'] <- i }
           }
         }
@@ -134,7 +134,7 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
             yy <- GraphN[match(xx, CodeN)]
             yy[is.na(yy)] <- xx[is.na(yy)]
             yy <- yy[order(match(yy, GraphN))]
-            dat[rownames(dat)==i, 'CName'] <- paste(yy, collapse=' x ')
+            dat[rownames(dat)==i, 'CName'] <- paste(yy, collapse='\nx ')
           } else { dat[rownames(dat)==i, 'CName'] <- i }
         }
       }
@@ -170,7 +170,7 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
               yy <- GraphN[match(xx, CodeN)]
               yy[is.na(yy)] <- xx[is.na(yy)]
               yy <- yy[order(match(yy, GraphN))]
-              dat[rownames(dat)==i, 'CName'] <- paste(yy, collapse=' x ')
+              dat[rownames(dat)==i, 'CName'] <- paste(yy, collapse='\nx ')
             } else { dat[rownames(dat)==i, 'CName'] <- i }
           }
         }

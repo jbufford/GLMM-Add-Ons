@@ -42,20 +42,21 @@
 
 model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="Model",
                         infl=F, infl.obs=F, do.lm=F, off=T, respvar=NA, extra=NULL,
-                        to.files="", parallel=F, ncpus=NULL, infl.th = NULL){
+                        to.files="", parallel=F, ncpus=NULL, infl.th = NULL, jb=F){
 
   if(to.files!="" & substr(to.files,nchar(to.files),nchar(to.files)) != "/"){
     to.files <- paste(to.files, "/", sep="")
   }
 
-  jb <- F
+  #allows user to set jb to manually direct to influenceJB because of differences in
+  #   data sourcing between influence and influenceJB (affects data sets with NAs)
 
   library(ggplot2, quietly=T)
-  if(infl|infl.obs) {library(influence.ME, quietly=T); infl <- T}
-  library(car, quietly=T)
-  library(coefplot, quietly=T)
-  library(lattice, quietly=T)
-  library(piecewiseSEM, quietly = T)
+  if(infl|infl.obs) {library(influence.ME, quietly=T); infl <- T} #for influence
+  library(car, quietly=T) #for Wald Type II chi-squared tests
+  library(coefplot, quietly=T) #for coefplots
+  library(lattice, quietly=T) #required for caterpillar plots
+  library(piecewiseSEM, quietly = T) #for R2 values
   #Depending on call, may load lme4, nlme, glmmADMB, rmarkdown, HLMdiag
 
   #Attractive theme for ggplot plots
@@ -118,10 +119,10 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     library(lme4)
 
     #Retrieve data
-    if(missing(dat)) {dat <- M@frame}
+    if(missing(dat)) {dat <- model.frame(M)}
 
     #Set response variable
-    if(is.na(respvar)) { respvar <- names(M@frame)[1] }
+    if(is.na(respvar)) { respvar <- names(model.frame(M))[1] }
 
     #Set random variable(s) and min.unit
     randvar <- names(M@flist)
@@ -138,11 +139,11 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     }
 
     #Set fixed variables (excludes interactions)
-    fixvar <- attributes(terms(M@frame))$term.labels
+    fixvar <- attributes(terms(model.frame(M)))$term.labels
     fixvar <- fixvar[!(fixvar%in% randvar)]
 
     #Set list of terms (includes interactions)
-    Mterms <- names(M@frame)[2:length(names(M@frame))]
+    Mterms <- names(model.frame(M))[2:length(names(model.frame(M)))]
 
     #Deal with weights or offsets
     if("(weights)" %in% Mterms) {
@@ -152,7 +153,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
     if(sum(grepl("offset", Mterms))>0) {
       jb <- T
-      Mterms <- gsub('offset\\(|\\)',"",Mterms[!(Mterms %in% "(offset)")])}
+      Mterms <- gsub('offset\\(|\\)',"",Mterms[!(Mterms %in% "(offset)")])
+      names(dat)[names(dat)=="(offset)"] <- as.character(M@call$offset) }
+    
     if("glmerMod" %in% class(M)) { fam <- M@resp$family[[1]] }
   }
 
@@ -555,19 +558,36 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
   }
 
   if(infl){
-
+    
     if(!'influenceJB' %in% ls() & (jb|parallel)){
       source(paste(to.files, "InfluenceJB.R", sep=""))
     }
     #If not already loaded, will load InfluenceJB.R to calc infl for model w/ weights
+    
+    if(is.null(infl.th)){ infl.th <- 4/(length(unique(dat$MU))-
+                                          length(c(fixvar,randvar))-1) }
 
     if (min.unit %in% Mterms) {
       Infl.mu <- if(jb|parallel) {
         influenceJB(model=M, group=min.unit, parallel=parallel, ncpus=ncpus)
       } else { influence(model = M, group = min.unit) }
-      plot(Infl.mu, which="cook", sort=T,
-           cutoff=(4/(length(unique(dat$MU))-length(c(fixvar,randvar))-1)),
+      plot(Infl.mu, which="cook", sort=T, cutoff=(infl.th), 
            main = paste("Cook's D by", min.unit))
+      
+      #Drop points over an influence threshold and refit model
+      if(any(cooks.distance(Infl.mu) > infl.th)){
+        cat(paste("\nThe following groups have Cook's D >",round(infl.th, 4),":\n"))
+        CookD <- data.frame('CookD'=cooks.distance(Infl.mu))
+        CookD$MU <- row.names(CookD)
+        dat <- merge(dat, CookD, all=T)
+        dat <- dat[order(dat$CookD, decreasing=T),]
+        print(unique(dat[dat$CookD > infl.th, c('MU','CookD')]))
+        
+        M2 <- update(M, .~., data=dat[cooks.distance(Infl.mu) < infl.th,])
+        print(coefplot(M2) + theme_jb() +
+                ggtitle('Coefficients of Model without Influential Min Units'))
+      }
+      
     } else {
       cat('\nMinimum unit must be a model term to calculate influence\n')
       Infl.mu <- NA
@@ -579,16 +599,15 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
         influenceJB(model=M, obs=T, parallel=parallel, ncpus=ncpus)
       }
       else { influence(model = M, obs=TRUE) }
+      
+      infl.th <- 4/(nrow(dat)-length(c(fixvar,randvar))-1)
 
-      plot(Infl, which="cook", sort=T, cutoff=(4/(nrow(dat)-length(c(fixvar,randvar))-1)),
-           main="Cook's D by Observation")
+      plot(Infl, which="cook", sort=T, cutoff=infl.th, main="Cook's D by Observation")
 
       plot(Infl, which="dfbetas", cutoff=2/sqrt((nrow(dat)-length(c(fixvar,randvar)) -1)),
            sort=T, to.sort=colnames(M@pp$X)[2], main="Dfbetas")
 
       #Drop points over an influence threshold and refit model
-      if(is.null(infl.th)){ infl.th <- 4/(nrow(dat)-length(c(fixvar,randvar))-1) }
-
       if(any(cooks.distance(Infl) > infl.th)){
         cat(paste("\nThe following observations have Cook's D >",round(infl.th, 4),":\n"))
         dat$CookD <- cooks.distance(Infl)

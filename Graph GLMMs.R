@@ -63,7 +63,7 @@ bootm <- function(dat, i, M, min.unit=NA, min.reps=0) {
 
 getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
 
-  if(class(dat)=='boot'){
+  if('boot' %in% class(dat)){
 
     library(boot)
 
@@ -77,7 +77,7 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
   }
 
 
-  if(class(dat)=="list") {
+  if("list" %in% class(dat)) {
 
     for(i in names(dat)){
 
@@ -119,7 +119,7 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
     return(cidat)
   }
 
-  if(class(dat)=='data.frame') {
+  if('data.frame' %in% class(dat)) {
 
     dat$Sig <- ifelse((dat$HiCI<0 | dat$LowCI>0), "sig", 'NS')
 
@@ -147,7 +147,9 @@ getci <- function(dat, CodeN, GraphN, mod, boot.type='perc'){
     return(dat)
   }
 
-    if(class(dat)=='matrix') { #to process output from confint.merMod
+    if(class(dat)[[1]]=='matrix') { #to process output from confint.merMod
+      
+      library(lme4)
 
       if(missing(mod)) {stop('Model required to process output from confint.merMod')}
 
@@ -243,13 +245,13 @@ plot.coef <- function(dat, get.ci=T, boot.type='perc', CodeN, GraphN, mod, ci.na
             strip.background = element_rect(fill=NA, colour=NA, size = 0.2))
   }
 
-  if(class(dat)=="list"){
+  if("list" %in% class(dat)){
 
     datl <- list()
 
     if(get.ci){
 
-      if(!missing(mod) & class(dat[[1]])=='matrix'){
+      if(!missing(mod) & 'matrix' %in% class(dat)){
         if(length(mod)<length(dat)) {stop('Must provide a model for each confint object listed in the same order as the confint objects')}
       }
 
@@ -279,7 +281,7 @@ plot.coef <- function(dat, get.ci=T, boot.type='perc', CodeN, GraphN, mod, ci.na
     xlab("Effect Size") + ylab("") + geom_vline(aes(xintercept=0)) +
     scale_shape_manual(guide=F, values=SigShape) + theme_jb()
 
-  if(class(dat)=="list"){
+  if("list" %in% class(dat)){
 
     coef.plot <- coef.plot + geom_point(size=4) + facet_grid(.~Var, scales =facet.scale) +
       geom_errorbarh(aes(xmin=LowCI, xmax=HiCI, height=0.15))

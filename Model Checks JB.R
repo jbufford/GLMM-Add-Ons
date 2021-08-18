@@ -1,7 +1,7 @@
 ############################ Model Check for GLMM #############################
                             ## Jennifer Bufford ##
                            ## jlbufford@gmail.com ##
-                             ## May 24, 2019 ##
+                             ## June 22, 2021 ##
 
 ###############################################################################
 
@@ -99,6 +99,20 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ###### Extract Model Formula, Terms ######
 
+  if('lm' %in% class(M)){
+    
+    if(missing(dat)) {dat <- M$model}
+    
+    fixvar <- attributes(M$terms)$term.labels
+    Mterms <- fixvar[!grepl(':', fixvar)]
+    randvar <- NA
+    if(is.na(respvar)) { respvar <- names(M$model[1]) }
+
+    do.lm <- F
+    
+    if(is.na(min.unit)){return('Please specify a minimum unit for graphing.')}
+  }
+  
   if('glm' %in% class(M)){
 
     if(missing(dat)) {dat <- M$data}
@@ -114,7 +128,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
     if(is.na(min.unit)){return('Please specify a minimum unit for graphing.')}
   }
 
-  if(any(class(M) %in% c("lmerMod","glmerMod"))) {
+  if(any(class(M) %in% c("lmerMod","glmerMod","lmerModLmerTest"))) {
 
     library(lme4)
 
@@ -464,7 +478,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ##### Plot Random Effects #####
 
-  if(any(class(M) %in% c("lmerMod","glmerMod"))) {
+  if(any(class(M) %in% c("lmerMod","glmerMod","lmerModLmerTest"))) {
     print(dotplot(ranef(M, condVar=T))) }
 
   if('glmmadmb' %in% class(M)) {
@@ -475,7 +489,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ##### Plot Coefficients #####
 
-  if(any(class(M) %in% c("lmerMod", "glmerMod", 'glm','glmmadmb')) & length(fixvar)>0) {
+  if(any(class(M) %in% c("lmerMod", "glmerMod","lmerModLmerTest", 'glm','glmmadmb')) & length(fixvar)>0) {
     print(coefplot(M) + theme_jb())
   }
 
@@ -493,7 +507,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       }
     }
 
-    if(any(class(M) %in% c('lmerMod',"glmerMod"))) {
+    if(any(class(M) %in% c('lmerMod',"glmerMod","lmerModLmerTest"))) {
 
       if("(weights)" %in% names(M@frame)) {
 
@@ -551,7 +565,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
   ###### Influential Observations ######
 
-  if(infl & !any(class(M) %in% c('lmerMod',"glmerMod"))) {
+  if(infl & !any(class(M) %in% c('lmerMod',"glmerMod","lmerModLmerTest"))) {
 
     warning(paste("Influence.ME is not implemented for", class(M)))
     infl <- F
@@ -576,6 +590,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       
       #Drop points over an influence threshold and refit model
       if(any(cooks.distance(Infl.mu) > infl.th)){
+        # browser()
         cat(paste("\nThe following groups have Cook's D >",round(infl.th, 4),":\n"))
         CookD <- data.frame('CookD'=cooks.distance(Infl.mu))
         CookD$MU <- row.names(CookD)
@@ -583,7 +598,7 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
         dat <- dat[order(dat$CookD, decreasing=T),]
         print(unique(dat[dat$CookD > infl.th, c('MU','CookD')]))
         
-        M2 <- update(M, .~., data=dat[cooks.distance(Infl.mu) < infl.th,])
+        M2 <- update(M, data=dat[dat$CookD < infl.th,])
         print(coefplot(M2) + theme_jb() +
                 ggtitle('Coefficients of Model without Influential Min Units'))
       }
@@ -600,7 +615,9 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
       }
       else { influence(model = M, obs=TRUE) }
       
-      infl.th <- 4/(nrow(dat)-length(c(fixvar,randvar))-1)
+      if(is.null(infl.th)|
+         infl.th==4/(length(unique(dat$MU))-length(c(fixvar,randvar))-1)) {
+        infl.th <- 4/(nrow(dat)-length(c(fixvar,randvar))-1)}
 
       plot(Infl, which="cook", sort=T, cutoff=infl.th, main="Cook's D by Observation")
 
@@ -609,12 +626,13 @@ model.check <- function(M, dat, min.unit=NA, make.pdf=F, make.markdown=F, name="
 
       #Drop points over an influence threshold and refit model
       if(any(cooks.distance(Infl) > infl.th)){
+        # browser()
         cat(paste("\nThe following observations have Cook's D >",round(infl.th, 4),":\n"))
         dat$CookD <- cooks.distance(Infl)
         dat <- dat[order(dat$CookD, decreasing=T),]
         print(dat[dat$CookD > infl.th,])
 
-        M2 <- update(M, .~., data=dat[cooks.distance(Infl) < infl.th,])
+        M2 <- update(M, data=dat[dat$CookD < infl.th,])
         print(coefplot(M2) + theme_jb() +
                 ggtitle('Coefficients of Model without Influential Points'))
       }
